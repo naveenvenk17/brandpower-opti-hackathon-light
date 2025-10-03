@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis - BrandCompass.ai{% endblock %}
+
+{% block content %}
+<div class="container fade-in">
+    <h1 class="hero-title text-center mb-4">🎯 Brand Power Analysis</h1>
+
+    <section class="mb-5">
+        <h2 class="section-header">🎛️ Analysis Parameters</h2>
+
+        <div class="grid grid-3">
+            <div class="card">
+                <div class="card-header">📊 Select Brands</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Choose brands for analysis:</label>
+                        <select id="brandSelect" class="form-control" multiple size="5">
+                            {% for brand in brands %}
+                            <option value="{{ brand }}" selected>{{ brand }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📅 Select Years</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Choose years for analysis:</label>
+                        <select id="yearSelect" class="form-control" multiple size="5">
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if year == 2024 %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📆 Select Months</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Choose months for analysis:</label>
+                        <select id="monthSelect" class="form-control" multiple size="5">
+                            {% for month in months %}
+                            <option value="{{ month }}" {% if month == 7 %}selected{% endif %}>Month {{ month }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <h2 class="section-header">📊 Data Preview</h2>
+
+        <div class="card">
+            <div class="card-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Uploaded Data with Optimizable Features</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="percentageToggle" onchange="togglePercentageView()">
+                        <span>📊 Show as Percentage</span>
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    {{ data_preview|safe }}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <h2 class="section-header">🎛️ Adjust Marketing Spend</h2>
+
+        <div class="card">
+            <div class="card-header">Optimizable Marketing Channels</div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <strong>Instructions:</strong> Adjust the sliders below to simulate changes in marketing spend across different channels.
+                </div>
+
+                <div id="channelControls" class="grid grid-2">
+                    {% for feature in optimizable_features %}
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ feature.replace('_', ' ').title() }}:
+                            <span id="value_{{ feature }}" class="text-accent">0%</span>
+                        </label>
+                        <input
+                            type="range"
+                            class="form-control"
+                            id="slider_{{ feature }}"
+                            min="-50"
+                            max="50"
+                            value="0"
+                            step="5"
+                            oninput="updateSliderValue('{{ feature }}', this.value)"
+                            style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--medium-gray);">
+                            <span>-50%</span>
+                            <span>0%</span>
+                            <span>+50%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center mt-4">
+                    <button class="btn btn-secondary" onclick="resetSliders()">
+                        🔄 Reset All Channels
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5 text-center">
+        <h2 class="section-header">🚀 Calculate Brand Power</h2>
+
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+            <div class="card-body">
+                <button class="btn btn-primary btn-large btn-block" onclick="calculatePower()">
+                    🧮 Calculate Brand Power
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="resultsSection" class="mb-5" style="display: none;">
+        <h2 class="section-header">📈 Results</h2>
+
+        <div class="card">
+            <div class="card-header">Quarterly Brand Power Forecast</div>
+            <div class="card-body">
+                <div id="resultsTable"></div>
+                <div id="chartContainer" class="mt-4"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <h2 class="section-header">💾 Save Experiment</h2>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Experiment Name:</label>
+                        <input type="text" id="experimentName" class="form-control" placeholder="My Experiment">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-accent btn-block" onclick="saveExperiment()">
+                            💾 Save Experiment
+                        </button>
+                    </div>
+                </div>
+                <div id="saveStatus" class="mt-3"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="text-center mb-5">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            🏠 Back to Home
+        </a>
+    </div>
+</div>
+
+<style>
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: linear-gradient(to right, var(--danger) 0%, var(--medium-gray) 50%, var(--success) 100%);
+    border-radius: 5px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-blue);
+    border: 3px solid var(--white);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--primary-blue);
+    border: 3px solid var(--white);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
+</style>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+let baselineData = null;
+let simulatedData = null;
+let currentChanges = {};
+
+function updateSliderValue(feature, value) {
+    document.getElementById('value_' + feature).textContent = value + '%';
+    currentChanges[feature] = parseFloat(value);
+}
+
+function resetSliders() {
+    const sliders = document.querySelectorAll('input[type="range"]');
+    sliders.forEach(slider => {
+        slider.value = 0;
+        const feature = slider.id.replace('slider_', '');
+        updateSliderValue(feature, 0);
+    });
+    currentChanges = {};
+}
+
+function togglePercentageView() {
+    const checked = document.getElementById('percentageToggle').checked;
+    console.log('Percentage view:', checked);
+}
+
+function calculatePower() {
+    const resultsSection = document.getElementById('resultsSection');
+    resultsSection.style.display = 'none';
+
+    const spinner = document.createElement('div');
+    spinner.innerHTML = '<div class="spinner"></div><p class="text-center">Calculating brand power...</p>';
+    document.getElementById('resultsTable').innerHTML = '';
+    document.getElementById('resultsTable').appendChild(spinner);
+    resultsSection.style.display = 'block';
+
+    fetch('{{ url_for("calculate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            changes: currentChanges
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        baselineData = data.baseline;
+        simulatedData = data.simulated;
+        displayResults(data);
+    })
+    .catch(error => {
+        document.getElementById('resultsTable').innerHTML = `
+            <div class="alert alert-danger">
+                <strong>✗ Error:</strong> ${error.message}
+            </div>
+        `;
+    });
+}
+
+function displayResults(data) {
+    const quarters = data.quarters;
+    const baseline = data.baseline;
+    const simulated = data.simulated;
+
+    let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
+    tableHTML += '<th>Brand</th>';
+    quarters.forEach(q => {
+        tableHTML += `<th>${q}</th>`;
+    });
+    tableHTML += '</tr></thead><tbody>';
+
+    Object.keys(baseline).forEach(brand => {
+        tableHTML += `<tr><td><strong>${brand}</strong></td>`;
+
+        baseline[brand].forEach((baseValue, i) => {
+            const simValue = simulated[brand][i];
+            const change = ((simValue - baseValue) / baseValue) * 100;
+
+            let indicator = '→';
+            let statusClass = 'status-unchanged';
+
+            if (Math.abs(change) >= 1) {
+                if (change > 0) {
+                    indicator = '↗';
+                    statusClass = 'status-increase';
+                } else {
+                    indicator = '↘';
+                    statusClass = 'status-decrease';
+                }
+            }
+
+            tableHTML += `<td><span class="status-badge ${statusClass}">${simValue.toFixed(2)} ${indicator} (${change > 0 ? '+' : ''}${change.toFixed(1)}%)</span></td>`;
+        });
+
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table></div>';
+    document.getElementById('resultsTable').innerHTML = tableHTML;
+
+    createChart(baseline, simulated, quarters);
+}
+
+function createChart(baseline, simulated, quarters) {
+    const traces = [];
+
+    Object.keys(baseline).forEach((brand, i) => {
+        traces.push({
+            x: quarters,
+            y: baseline[brand],
+            mode: 'lines+markers',
+            name: `${brand} - Baseline`,
+            line: { width: 3 },
+            marker: { size: 8 }
+        });
+
+        traces.push({
+            x: quarters,
+            y: simulated[brand],
+            mode: 'lines+markers',
+            name: `${brand} - Simulated`,
+            line: { width: 3, dash: 'dash' },
+            marker: { size: 8, symbol: 'diamond' }
+        });
+    });
+
+    const layout = {
+        title: 'Baseline vs Simulated Power Forecast',
+        xaxis: { title: 'Quarter' },
+        yaxis: { title: 'Power' },
+        height: 500,
+        hovermode: 'x unified'
+    };
+
+    Plotly.newPlot('chartContainer', traces, layout);
+}
+
+function saveExperiment() {
+    const name = document.getElementById('experimentName').value.trim();
+
+    if (!name) {
+        document.getElementById('saveStatus').innerHTML = `
+            <div class="alert alert-warning">
+                <strong>⚠ Please enter an experiment name.</strong>
+            </div>
+        `;
+        return;
+    }
+
+    if (!baselineData || !simulatedData) {
+        document.getElementById('saveStatus').innerHTML = `
+            <div class="alert alert-warning">
+                <strong>⚠ Please calculate results first.</strong>
+            </div>
+        `;
+        return;
+    }
+
+    fetch('{{ url_for("save_experiment") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            baseline_data: baselineData,
+            simulated_data: simulatedData,
+            changes: currentChanges
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('saveStatus').innerHTML = `
+                <div class="alert alert-success">
+                    <strong>✓ Experiment saved successfully!</strong> (Total: ${data.experiment_count})
+                </div>
+            `;
+            document.getElementById('experimentName').value = '';
+        }
+    })
+    .catch(error => {
+        document.getElementById('saveStatus').innerHTML = `
+            <div class="alert alert-danger">
+                <strong>✗ Error:</strong> ${error.message}
+            </div>
+        `;
+    });
+}
+</script>
+{% endblock %}
