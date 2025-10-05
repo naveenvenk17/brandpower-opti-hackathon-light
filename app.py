@@ -186,6 +186,20 @@ def upload_file():
 
         try:
             df = pd.read_csv(filepath)
+
+            # Round all numeric columns to 0 decimal points
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            for col in numeric_columns:
+                # Replace infinite values with NaN
+                df[col] = df[col].replace([np.inf, -np.inf], np.nan)
+                # Fill NaN values with 0
+                df[col] = df[col].fillna(0)
+                # Round and convert to integer
+                df[col] = df[col].round(0).astype(int)
+
+            # Save the preprocessed data back to the file
+            df.to_csv(filepath, index=False)
+
             session['uploaded_file'] = filename
             session['data_shape'] = {'rows': len(df), 'cols': len(df.columns)}
 
@@ -236,6 +250,7 @@ def analysis():
         year_col = 'Year' if 'Year' in df.columns else 'year'
         month_col = 'Month' if 'Month' in df.columns else 'month'
         brand_col = 'Brand' if 'Brand' in df.columns else 'brand'
+        week_col = 'week_of_month' if 'week_of_month' in df.columns else 'Week' if 'Week' in df.columns else 'week'
 
         if year_col in df.columns and month_col in df.columns:
             df = df[
@@ -249,6 +264,8 @@ def analysis():
                        ) if year_col in df.columns else []
         months = sorted(df[month_col].unique().tolist()
                         ) if month_col in df.columns else []
+        weeks = sorted(df[week_col].unique().tolist()
+                       ) if week_col in df.columns else []
 
         baseline_df = load_baseline_forecast()
         baseline_data = None
@@ -280,12 +297,14 @@ def analysis():
         brand_col_name = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
         year_col_name = 'Year' if 'Year' in df.columns else 'year' if 'year' in df.columns else None
         month_col_name = 'Month' if 'Month' in df.columns else 'month' if 'month' in df.columns else None
+        week_col_name = 'week_of_month' if 'week_of_month' in df.columns else 'Week' if 'Week' in df.columns else 'week' if 'week' in df.columns else None
 
         return render_template(
             'analysis.html',
             brands=brands,
             years=years,
             months=months,
+            weeks=weeks,
             data_preview=df.head(10).to_html(
                 classes='table table-striped', index=False),
             id_columns=present_id_columns,
@@ -294,7 +313,8 @@ def analysis():
             table_rows=table_rows,
             brand_col=brand_col_name,
             year_col=year_col_name,
-            month_col=month_col_name
+            month_col=month_col_name,
+            week_col=week_col_name
         )
     except Exception as e:
         return redirect(url_for('index'))
@@ -318,6 +338,7 @@ def calculate():
         brand_col = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
         year_col = 'Year' if 'Year' in df.columns else 'year' if 'year' in df.columns else None
         month_col = 'Month' if 'Month' in df.columns else 'month' if 'month' in df.columns else None
+        week_col = 'week_of_month' if 'week_of_month' in df.columns else 'Week' if 'Week' in df.columns else 'week' if 'week' in df.columns else None
 
         # Apply standard date filter
         if year_col in df.columns and month_col in df.columns:
@@ -329,6 +350,7 @@ def calculate():
         sel_brands = filters.get('brands', [])
         sel_years = filters.get('years', [])
         sel_months = filters.get('months', [])
+        sel_weeks = filters.get('weeks', [])
 
         df_filt = df.copy()
         if brand_col and sel_brands:
@@ -337,6 +359,8 @@ def calculate():
             df_filt = df_filt[df_filt[year_col].isin(sel_years)]
         if month_col and sel_months:
             df_filt = df_filt[df_filt[month_col].isin(sel_months)]
+        if week_col and sel_weeks:
+            df_filt = df_filt[df_filt[week_col].isin(sel_weeks)]
 
         # Baseline per-brand power - get ALL brands from full dataset, not just filtered
         brands_all = sorted(df[brand_col].unique(
@@ -363,6 +387,8 @@ def calculate():
                 if month_col and month_col in edited_df.columns and sel_months:
                     edited_df = edited_df[edited_df[month_col].isin(
                         sel_months)]
+                if week_col and week_col in edited_df.columns and sel_weeks:
+                    edited_df = edited_df[edited_df[week_col].isin(sel_weeks)]
 
                 for feat in optimizable:
                     if feat in df_filt.columns and feat in edited_df.columns:

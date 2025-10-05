@@ -185,7 +185,7 @@
 
 
 
-        <section class="mb-5">
+    <section class="mb-5">
             <h2 class="section-header">Adjust Marketing Spend</h2>
 
             <div class="card">
@@ -199,21 +199,27 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('brand', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('brand', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search brands..." data-search="brand">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% set default_brand = 'AGUILA' %}
-                                    {% for brand in brands %}
+                            {% for brand in brands %}
                                     <div class="multi-select-option {% if brand|upper == default_brand %}selected{% endif %}"
                                         data-value="{{ brand }}" data-filter-type="brand" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ brand }}</span>
                                     </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
+                            {% endfor %}
+                    </div>
+                </div>
+            </div>
 
                         <!-- Year Filter Multi-Select -->
                         <div class="multi-select-container" data-filter="year">
@@ -223,20 +229,26 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('year', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('year', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search years..." data-search="year">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
-                                    {% for year in years %}
+                            {% for year in years %}
                                     <div class="multi-select-option {% if year == 2024 %}selected{% endif %}"
                                         data-value="{{ year }}" data-filter-type="year" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ year }}</span>
                                     </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
+                            {% endfor %}
+                    </div>
+                </div>
+            </div>
 
                         <!-- Month Filter Multi-Select -->
                         <div class="multi-select-container" data-filter="month">
@@ -246,18 +258,56 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('month', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('month', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search months..." data-search="month">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
-                                    {% for month in months %}
+                                    {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                                    'Oct', 'Nov', 'Dec'] %}
+                            {% for month in months %}
                                     <div class="multi-select-option {% if month == 7 %}selected{% endif %}"
                                         data-value="{{ month }}" data-filter-type="month" role="option">
                                         <div class="multi-select-checkbox"></div>
-                                        <span>Month {{ month }}</span>
+                                        <span>{{ month }} - {{ month_names[month - 1] if month >= 1 and month <= 12
+                                                else 'Month ' ~ month }}</span>
                                     </div>
+                            {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+                        <!-- Week Filter Multi-Select -->
+                        <div class="multi-select-container" data-filter="week">
+                            <button class="multi-select-trigger" type="button" aria-haspopup="listbox"
+                                aria-expanded="false">
+                                <span class="multi-select-value">Select weeks</span>
+                                <span class="multi-select-icon">▼</span>
+                            </button>
+                            <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('week', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('week', event)">Clear</button>
+        </div>
+                                <div class="multi-select-search">
+                                    <input type="text" placeholder="Search weeks..." data-search="week">
+                </div>
+                                <div class="multi-select-options" role="listbox">
+                                    {% for week in weeks %}
+                                    <div class="multi-select-option" data-value="{{ week }}" data-filter-type="week"
+                                        role="option">
+                                        <div class="multi-select-checkbox"></div>
+                                        <span>Week {{ week }}</span>
+            </div>
                                     {% endfor %}
-                                </div>
+                </div>
                             </div>
                         </div>
 
@@ -269,27 +319,43 @@
                     </div>
 
                     <div id="editableTable" class="table-container" style="max-height: 420px; overflow: auto;"></div>
-                </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="mb-5 text-center">
+    <section class="mb-5">
             <h2 class="section-header">Calculate Brand Power</h2>
 
-            <div class="card" style="max-width: 600px; margin: 0 auto;">
-                <div class="card-body">
-                    <button class="btn btn-primary btn-large btn-block" onclick="calculatePower()">Calculate Brand
-                        Power</button>
+        <div class="card">
+            <div class="card-body">
+                    <div style="display: flex; gap: 2rem; align-items: center;">
+                        <div style="flex: 0 0 auto;">
+                            <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;"
+                                onclick="calculatePower()">Calculate Brand Power</button>
+                </div>
+                        <div style="flex: 1;">
+                            <div id="changesSummary"
+                                style="background: #f9fafb; padding: 1rem; border-radius: 6px; border-left: 3px solid #1e50a2;">
+                                <strong
+                                    style="color: #374151; font-size: 0.95rem; margin-bottom: 0.75rem; display: block;">Changes
+                                    Summary:</strong>
+                                <div id="changesList" style="font-size: 0.875rem; color: #6b7280;">
+                                    <p style="text-align: center; color: #9ca3af; font-style: italic; margin: 0;">No
+                                        changes made yet. Edit values in the table above to see changes here.</p>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section id="resultsSection" class="mb-5" style="display: none;">
+    <section id="resultsSection" class="mb-5" style="display: none;">
             <h2 class="section-header">Results</h2>
 
-            <div class="card">
-                <div class="card-header">Quarterly Brand Power Forecast</div>
-                <div class="card-body">
+        <div class="card">
+            <div class="card-header">Quarterly Brand Power Forecast</div>
+            <div class="card-body">
                     <div id="resultsTable" style="max-height: 450px; overflow-y: auto;"></div>
                     <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
                         <label class="form-label" style="margin: 0;">Filter brands:</label>
@@ -300,6 +366,12 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn"
+                                        onclick="selectAllFilter('chart-brand', event)">Select All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('chart-brand', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search brands..." data-search="chart-brand">
                                 </div>
@@ -309,70 +381,70 @@
                             </div>
                         </div>
                     </div>
-                    <div id="chartContainer" class="mt-4"></div>
-                </div>
+                <div id="chartContainer" class="mt-4"></div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="mb-5">
+    <section class="mb-5">
             <h2 class="section-header">Save Current Experiment</h2>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Experiment Name:</label>
-                            <input type="text" id="experimentName" class="form-control" placeholder="experiment_1">
-                        </div>
-                        <div style="display: flex; align-items: flex-end;">
-                            <button class="btn btn-accent btn-block" onclick="saveExperiment()"
-                                style="background: #B5942F; border-color: #B5942F;"
+        <div class="card">
+            <div class="card-body">
+                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                        <label class="form-label">Experiment Name:</label>
+                            <input type="text" id="experimentName" class="form-control" placeholder="Experiment_1">
+                    </div>
+                        <div style="flex: 0 0 auto;">
+                            <button class="btn btn-accent" onclick="saveExperiment()"
+                                style="background: #B5942F; border-color: #B5942F; padding: 0.625rem 2rem;"
                                 onmouseover="this.style.background='#9d7d28'"
                                 onmouseout="this.style.background='#B5942F'">Save Experiment</button>
-                        </div>
                     </div>
-                    <div id="saveStatus" class="mt-3"></div>
                 </div>
+                <div id="saveStatus" class="mt-3"></div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <div class="text-center mb-5">
+    <div class="text-center mb-5">
             <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
 </div>
 
 <style>
-    input[type="range"] {
-        -webkit-appearance: none;
-        appearance: none;
-        height: 8px;
-        background: linear-gradient(to right, var(--danger) 0%, var(--medium-gray) 50%, var(--success) 100%);
-        border-radius: 5px;
-        outline: none;
-    }
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: linear-gradient(to right, var(--danger) 0%, var(--medium-gray) 50%, var(--success) 100%);
+    border-radius: 5px;
+    outline: none;
+}
 
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        background: var(--primary-blue);
-        border: 3px solid var(--white);
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: var(--shadow-md);
-    }
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-blue);
+    border: 3px solid var(--white);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
 
-    input[type="range"]::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        background: var(--primary-blue);
-        border: 3px solid var(--white);
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: var(--shadow-md);
-    }
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--primary-blue);
+    border: 3px solid var(--white);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+}
 </style>
 
 <!-- Server-provided data for JS -->
@@ -383,9 +455,9 @@
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    let baselineData = null;
-    let simulatedData = null;
-    let currentChanges = {};
+let baselineData = null;
+let simulatedData = null;
+let currentChanges = {};
     const __serverEl = document.getElementById('server-data');
     let tableColumns = JSON.parse((__serverEl && __serverEl.dataset.tableColumns) ? __serverEl.dataset.tableColumns : '[]');
     let tableRows = JSON.parse((__serverEl && __serverEl.dataset.tableRows) ? __serverEl.dataset.tableRows : '[]');
@@ -396,20 +468,23 @@
         if (!container) return;
 
         const featuresSet = new Set(featureColumns);
+        const isPercentage = document.getElementById('percentageToggle').checked;
 
         // Get filter values
         const selBrands = multiSelects['brand'] ? multiSelects['brand'].getSelectedValues() : [];
         const selYears = multiSelects['year'] ? multiSelects['year'].getSelectedValues().map(v => parseInt(v)) : [];
         const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
+        const selWeeks = multiSelects['week'] ? multiSelects['week'].getSelectedValues().map(v => parseInt(v)) : [];
 
         // Determine ID column names (flexible)
         const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
         const yearCol = tableColumns.find(c => c.toLowerCase() === 'year') || 'year';
         const monthCol = tableColumns.find(c => c.toLowerCase() === 'month') || 'month';
+        const weekCol = tableColumns.find(c => c.toLowerCase() === 'week_of_month' || c.toLowerCase() === 'week') || 'week_of_month' || 'Week';
 
-        let html = '<table class="table table-striped"><thead><tr>';
-        tableColumns.forEach(col => { html += `<th>${col}</th>`; });
-        html += '</tr></thead><tbody>';
+        // First pass: filter rows and calculate column totals for percentage mode
+        const filteredRowIndices = [];
+        const columnTotals = {};
 
         tableRows.forEach((row, rIdx) => {
             // Apply filters
@@ -423,17 +498,45 @@
             if (selMonths.length > 0 && monthCol && row[monthCol]) {
                 show = show && selMonths.includes(parseInt(row[monthCol]));
             }
+            if (selWeeks.length > 0 && weekCol && row[weekCol]) {
+                show = show && selWeeks.includes(parseInt(row[weekCol]));
+            }
 
-            if (!show) return; // Skip filtered out rows
+            if (show) {
+                filteredRowIndices.push(rIdx);
+                // Calculate totals for each optimizable column
+                if (isPercentage) {
+                    featureColumns.forEach(col => {
+                        const val = parseFloat(row[col]) || 0;
+                        columnTotals[col] = (columnTotals[col] || 0) + val;
+                    });
+                }
+            }
+        });
 
+        // Second pass: build HTML
+        let html = '<table class="table table-striped"><thead><tr>';
+        tableColumns.forEach(col => { html += `<th>${col}</th>`; });
+        html += '</tr></thead><tbody>';
+
+        filteredRowIndices.forEach(rIdx => {
+            const row = tableRows[rIdx];
             html += '<tr>';
             tableColumns.forEach(col => {
-                const val = row[col] !== undefined ? row[col] : '';
+                const rawVal = row[col] !== undefined ? row[col] : '';
                 const isEditable = featuresSet.has(col);
-                if (isEditable) {
-                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${val}" class="form-control" style="min-width: 100px;"></td>`;
+
+                if (isEditable && isPercentage) {
+                    // Show as percentage
+                    const numVal = parseFloat(rawVal) || 0;
+                    const total = columnTotals[col] || 1;
+                    const percentage = total > 0 ? (numVal / total * 100).toFixed(2) : '0.00';
+                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${percentage}" class="form-control" style="min-width: 100px;" step="0.01" data-percentage="true" data-total="${total}"> <span style="font-size: 0.875rem; color: #6b7280;">%</span></td>`;
+                } else if (isEditable) {
+                    // Show as absolute value
+                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${rawVal}" class="form-control" style="min-width: 100px;"></td>`;
                 } else {
-                    html += `<td>${val}</td>`;
+                    html += `<td>${rawVal}</td>`;
                 }
             });
             html += '</tr>';
@@ -446,85 +549,184 @@
             input.addEventListener('change', (e) => {
                 const rowIndex = parseInt(e.target.getAttribute('data-row'));
                 const colName = e.target.getAttribute('data-col');
-                const newVal = parseFloat(e.target.value);
-                tableRows[rowIndex][colName] = isNaN(newVal) ? 0 : newVal;
-                // accumulate total change per feature (% change vs original sum not known here); we pass absolute deltas
-                if (!isNaN(newVal)) {
-                    currentChanges[colName] = (currentChanges[colName] || 0) + 0; // placeholder; server uses sums
+                const inputVal = parseFloat(e.target.value);
+
+                if (e.target.hasAttribute('data-percentage')) {
+                    // Convert percentage back to absolute value
+                    const total = parseFloat(e.target.getAttribute('data-total')) || 0;
+                    const absoluteVal = (inputVal / 100) * total;
+                    tableRows[rowIndex][colName] = isNaN(absoluteVal) ? 0 : absoluteVal;
+                } else {
+                    tableRows[rowIndex][colName] = isNaN(inputVal) ? 0 : inputVal;
                 }
+
+                // Update changes summary
+                updateChangesSummary();
             });
         });
     }
 
-    function togglePercentageView() {
-        const checked = document.getElementById('percentageToggle').checked;
-        // In a full implementation we would recompute percentages server-side.
-        // For now we keep values as-is; calculation endpoint uses absolute deltas.
-    }
+    // Store original data for comparison
+    let originalTableRows = null;
 
-    function calculatePower() {
-        const resultsSection = document.getElementById('resultsSection');
-        resultsSection.style.display = 'none';
+    function updateChangesSummary() {
+        if (!originalTableRows) {
+            originalTableRows = JSON.parse(JSON.stringify(tableRows));
+        }
 
-        const spinner = document.createElement('div');
-        spinner.innerHTML = '<div class="spinner"></div><p class="text-center">Calculating brand power...</p>';
-        document.getElementById('resultsTable').innerHTML = '';
-        document.getElementById('resultsTable').appendChild(spinner);
-        resultsSection.style.display = 'block';
+        const changesListEl = document.getElementById('changesList');
+        if (!changesListEl) return;
+
+        // Get filter values
+        const selBrands = multiSelects['brand'] ? multiSelects['brand'].getSelectedValues() : [];
+        const selYears = multiSelects['year'] ? multiSelects['year'].getSelectedValues().map(v => parseInt(v)) : [];
+        const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
+        const selWeeks = multiSelects['week'] ? multiSelects['week'].getSelectedValues().map(v => parseInt(v)) : [];
+
+        const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
+        const yearCol = tableColumns.find(c => c.toLowerCase() === 'year') || 'year';
+        const monthCol = tableColumns.find(c => c.toLowerCase() === 'month') || 'month';
+        const weekCol = tableColumns.find(c => c.toLowerCase() === 'week_of_month' || c.toLowerCase() === 'week') || 'week_of_month' || 'Week';
+
+        // Filter function
+        const matchesFilter = (row) => {
+            let match = true;
+            if (selBrands.length > 0 && brandCol && row[brandCol]) {
+                match = match && selBrands.includes(String(row[brandCol]));
+            }
+            if (selYears.length > 0 && yearCol && row[yearCol]) {
+                match = match && selYears.includes(parseInt(row[yearCol]));
+            }
+            if (selMonths.length > 0 && monthCol && row[monthCol]) {
+                match = match && selMonths.includes(parseInt(row[monthCol]));
+            }
+            if (selWeeks.length > 0 && weekCol && row[weekCol]) {
+                match = match && selWeeks.includes(parseInt(row[weekCol]));
+            }
+            return match;
+        };
+
+        // Calculate column sums
+        const columnChanges = {};
+        featureColumns.forEach(col => {
+            let originalSum = 0;
+            let currentSum = 0;
+
+            originalTableRows.forEach((row, idx) => {
+                if (matchesFilter(row)) {
+                    originalSum += parseFloat(row[col]) || 0;
+                }
+            });
+
+            tableRows.forEach((row, idx) => {
+                if (matchesFilter(row)) {
+                    currentSum += parseFloat(row[col]) || 0;
+                }
+            });
+
+            const delta = currentSum - originalSum;
+            if (Math.abs(delta) > 0.01) {
+                const pctChange = originalSum !== 0 ? (delta / originalSum) * 100 : 0;
+                columnChanges[col] = { delta, pctChange };
+            }
+        });
+
+        // Display changes
+        if (Object.keys(columnChanges).length === 0) {
+            changesListEl.innerHTML = '<p style="text-align: center; color: #9ca3af; font-style: italic; margin: 0;">No changes made yet. Edit values in the table above to see changes here.</p>';
+        } else {
+            let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">';
+            html += '<thead><tr style="border-bottom: 2px solid #e5e7eb;">';
+            html += '<th style="text-align: left; padding: 0.5rem; font-weight: 600; color: #374151;">Column Name</th>';
+            html += '<th style="text-align: right; padding: 0.5rem; font-weight: 600; color: #374151;">Delta</th>';
+            html += '</tr></thead><tbody>';
+
+            Object.entries(columnChanges).forEach(([col, change]) => {
+                const sign = change.delta >= 0 ? '+' : '';
+                const color = change.delta >= 0 ? '#10b981' : '#ef4444';
+                html += `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.5rem; color: #374151;">${col}</td>
+                        <td style="padding: 0.5rem; text-align: right; color: ${color}; font-weight: 600;">
+                            delta ${sign}${Math.round(change.delta).toLocaleString()} 
+                            <span style="font-size: 0.85rem;">(${sign}${change.pctChange.toFixed(1)}%)</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            changesListEl.innerHTML = html;
+        }
+}
+
+function togglePercentageView() {
+        renderEditableTable();
+}
+
+function calculatePower() {
+    const resultsSection = document.getElementById('resultsSection');
+    resultsSection.style.display = 'none';
+
+    const spinner = document.createElement('div');
+    spinner.innerHTML = '<div class="spinner"></div><p class="text-center">Calculating brand power...</p>';
+    document.getElementById('resultsTable').innerHTML = '';
+    document.getElementById('resultsTable').appendChild(spinner);
+    resultsSection.style.display = 'block';
 
         // gather filters from multi-select components
         const selBrands = multiSelects['brand'] ? multiSelects['brand'].getSelectedValues() : [];
         const selYears = multiSelects['year'] ? multiSelects['year'].getSelectedValues().map(v => parseInt(v)) : [];
         const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
+        const selWeeks = multiSelects['week'] ? multiSelects['week'].getSelectedValues().map(v => parseInt(v)) : [];
 
-        fetch('{{ url_for("calculate") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+    fetch('{{ url_for("calculate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
                 changes: currentChanges,
-                filters: { brands: selBrands, years: selYears, months: selMonths },
+                filters: { brands: selBrands, years: selYears, months: selMonths, weeks: selWeeks },
                 edited_rows: tableRows,
                 columns: tableColumns
-            })
         })
-            .then(response => response.json())
-            .then(data => {
-                baselineData = data.baseline;
-                simulatedData = data.simulated;
-                displayResults(data);
-            })
-            .catch(error => {
-                document.getElementById('resultsTable').innerHTML = `
+    })
+    .then(response => response.json())
+    .then(data => {
+        baselineData = data.baseline;
+        simulatedData = data.simulated;
+        displayResults(data);
+    })
+    .catch(error => {
+        document.getElementById('resultsTable').innerHTML = `
             <div class="alert alert-danger">
                 <strong>✗ Error:</strong> ${error.message}
             </div>
         `;
-            });
-    }
+    });
+}
 
-    function displayResults(data) {
-        const quarters = data.quarters;
-        const baseline = data.baseline;
-        const simulated = data.simulated;
+function displayResults(data) {
+    const quarters = data.quarters;
+    const baseline = data.baseline;
+    const simulated = data.simulated;
 
-        let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
-        tableHTML += '<th>Brand</th>';
-        quarters.forEach(q => {
-            tableHTML += `<th>${q}</th>`;
-        });
-        tableHTML += '</tr></thead><tbody>';
+    let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
+    tableHTML += '<th>Brand</th>';
+    quarters.forEach(q => {
+        tableHTML += `<th>${q}</th>`;
+    });
+    tableHTML += '</tr></thead><tbody>';
 
         // Show ALL brands, not just filtered ones
         const allBrands = Object.keys(baseline);
 
         allBrands.forEach(brand => {
-            tableHTML += `<tr><td><strong>${brand}</strong></td>`;
+        tableHTML += `<tr><td><strong>${brand}</strong></td>`;
 
-            baseline[brand].forEach((baseValue, i) => {
-                const simValue = simulated[brand][i];
-                const change = ((simValue - baseValue) / baseValue) * 100;
+        baseline[brand].forEach((baseValue, i) => {
+            const simValue = simulated[brand][i];
+            const change = ((simValue - baseValue) / baseValue) * 100;
                 const color = change >= 0 ? '#10b981' : '#ef4444';
                 tableHTML += `<td style="text-align: left;">
                     <span style="font-weight: 600;">${simValue.toFixed(2)}</span>
@@ -532,107 +734,108 @@
                         ${change > 0 ? '+' : ''}${change.toFixed(1)}%
                     </span>
                 </td>`;
-            });
-
-            tableHTML += '</tr>';
         });
 
-        tableHTML += '</tbody></table></div>';
-        document.getElementById('resultsTable').innerHTML = tableHTML;
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table></div>';
+    document.getElementById('resultsTable').innerHTML = tableHTML;
 
         populateBrandFilter(Object.keys(baseline));
-        createChart(baseline, simulated, quarters);
-    }
+    createChart(baseline, simulated, quarters);
+}
 
-    function createChart(baseline, simulated, quarters) {
-        const traces = [];
+function createChart(baseline, simulated, quarters) {
+    const traces = [];
         const selected = multiSelects['chart-brand'] ? multiSelects['chart-brand'].getSelectedValues() : [];
         const brandsToShow = selected.length ? selected : Object.keys(baseline);
 
         brandsToShow.forEach((brand, i) => {
-            traces.push({
-                x: quarters,
-                y: baseline[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Baseline`,
-                line: { width: 3 },
-                marker: { size: 8 }
-            });
-
-            traces.push({
-                x: quarters,
-                y: simulated[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Simulated`,
-                line: { width: 3, dash: 'dash' },
-                marker: { size: 8, symbol: 'diamond' }
-            });
+        traces.push({
+            x: quarters,
+            y: baseline[brand],
+            mode: 'lines+markers',
+            name: `${brand} - Baseline`,
+            line: { width: 3 },
+            marker: { size: 8 }
         });
 
-        const layout = {
-            title: 'Baseline vs Simulated Power Forecast',
-            xaxis: { title: 'Quarter' },
-            yaxis: { title: 'Power' },
-            height: 500,
-            hovermode: 'x unified'
-        };
+        traces.push({
+            x: quarters,
+            y: simulated[brand],
+            mode: 'lines+markers',
+            name: `${brand} - Simulated`,
+            line: { width: 3, dash: 'dash' },
+            marker: { size: 8, symbol: 'diamond' }
+        });
+    });
 
-        Plotly.newPlot('chartContainer', traces, layout);
-    }
+    const layout = {
+        title: 'Baseline vs Simulated Power Forecast',
+        xaxis: { title: 'Quarter' },
+        yaxis: { title: 'Power' },
+        height: 500,
+        hovermode: 'x unified'
+    };
 
-    function saveExperiment() {
-        const name = document.getElementById('experimentName').value.trim();
+    Plotly.newPlot('chartContainer', traces, layout);
+}
 
+function saveExperiment() {
+        let name = document.getElementById('experimentName').value.trim();
+
+        // If empty, use the placeholder value
         if (!name) {
-            document.getElementById('saveStatus').innerHTML = `
+            name = document.getElementById('experimentName').placeholder;
+        }
+
+    if (!name) {
+        document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-warning">
                 <strong>⚠ Please enter an experiment name.</strong>
             </div>
         `;
-            return;
-        }
+        return;
+    }
 
-        if (!baselineData || !simulatedData) {
-            document.getElementById('saveStatus').innerHTML = `
+    if (!baselineData || !simulatedData) {
+        document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-warning">
                 <strong>⚠ Please calculate results first.</strong>
             </div>
         `;
-            return;
-        }
+        return;
+    }
 
-        fetch('{{ url_for("save_experiment") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                name: name,
-                baseline_data: baselineData,
-                simulated_data: simulatedData,
-                changes: currentChanges
-            })
+    fetch('{{ url_for("save_experiment") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            baseline_data: baselineData,
+            simulated_data: simulatedData,
+            changes: currentChanges
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('saveStatus').innerHTML = `
-            <div class="alert alert-success">
-                <strong>✓ Experiment saved successfully!</strong> (Total: ${data.experiment_count})
-            </div>
-            `;
-                    document.getElementById('experimentName').value = '';
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+                    document.getElementById('saveStatus').innerHTML = '';
+                    // Update sidebar and set new default name
                     updateSidebarScenarios();
-                }
-            })
-            .catch(error => {
-                document.getElementById('saveStatus').innerHTML = `
+        }
+    })
+    .catch(error => {
+        document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-danger">
                 <strong>✗ Error:</strong> ${error.message}
             </div>
         `;
-            });
-    }
+    });
+}
 
     function populateBrandFilter(brands) {
         const optionsContainer = document.getElementById('chartBrandOptions');
@@ -656,10 +859,16 @@
         // Reinitialize the chart brand multi-select
         const chartBrandContainer = document.querySelector('[data-filter="chart-brand"]');
         if (chartBrandContainer) {
+            // Remove old instance if exists
+            if (multiSelects['chart-brand']) {
+                delete multiSelects['chart-brand'];
+            }
+
+            // Create new instance
             multiSelects['chart-brand'] = new MultiSelect(chartBrandContainer);
 
-            // Add change listener
-            chartBrandContainer.querySelectorAll('.multi-select-option').forEach(option => {
+            // Add change listener to all options
+            optionsContainer.querySelectorAll('.multi-select-option').forEach(option => {
                 option.addEventListener('click', () => {
                     setTimeout(() => {
                         if (baselineData && simulatedData) {
@@ -775,12 +984,13 @@
             const filterType = container.getAttribute('data-filter');
             multiSelects[filterType] = new MultiSelect(container);
 
-            // Add listener to re-render table when filters change (for brand, year, month)
-            if (filterType === 'brand' || filterType === 'year' || filterType === 'month') {
+            // Add listener to re-render table when filters change (for brand, year, month, week)
+            if (filterType === 'brand' || filterType === 'year' || filterType === 'month' || filterType === 'week') {
                 container.querySelectorAll('.multi-select-option').forEach(option => {
                     option.addEventListener('click', () => {
                         setTimeout(() => {
                             renderEditableTable();
+                            updateChangesSummary();
                         }, 50);
                     });
                 });
@@ -797,18 +1007,6 @@
         fetch('{{ url_for("clear_experiments") }}', { method: 'POST' })
             .then(() => {
                 updateSidebarScenarios();
-
-                // Show success notification
-                const notification = document.createElement('div');
-                notification.className = 'alert alert-success';
-                notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; transition: opacity 0.3s;';
-                notification.innerHTML = '<strong>✓ All experiments cleared</strong>';
-                document.body.appendChild(notification);
-
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    setTimeout(() => notification.remove(), 300);
-                }, 2000);
             });
     }
 
@@ -877,6 +1075,8 @@
                 const container = document.getElementById('sidebarScenariosList');
                 if (!scenarios || scenarios.length === 0) {
                     container.innerHTML = '<div class="experiments-empty">No experiments saved yet</div>';
+                    // Set default experiment name
+                    setDefaultExperimentName(1);
                     return;
                 }
 
@@ -894,10 +1094,26 @@
                     `;
                 });
                 container.innerHTML = html;
+
+                // Set default experiment name based on count
+                setDefaultExperimentName(scenarios.length + 1);
             })
             .catch(error => {
                 console.error('Error fetching scenarios:', error);
+                setDefaultExperimentName(1);
             });
+    }
+
+    // Set default experiment name
+    function setDefaultExperimentName(number) {
+        const nameInput = document.getElementById('experimentName');
+        if (nameInput) {
+            nameInput.placeholder = `Experiment_${number}`;
+            // Only auto-fill if it's still a default value or empty
+            if (!nameInput.value.trim() || nameInput.value.match(/^Experiment_\d+$/)) {
+                nameInput.value = `Experiment_${number}`;
+            }
+        }
     }
 
     // Load a scenario
@@ -918,17 +1134,8 @@
 
                     displayResults(data);
 
-                    // Show success notification
-                    const notification = document.createElement('div');
-                    notification.className = 'alert alert-success';
-                    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; transition: opacity 0.3s;';
-                    notification.innerHTML = `<strong>✓ Loaded experiment:</strong> ${scenario.name}`;
-                    document.body.appendChild(notification);
-
-                    setTimeout(() => {
-                        notification.style.opacity = '0';
-                        setTimeout(() => notification.remove(), 300);
-                    }, 3000);
+                    // Update experiment name for next save
+                    setDefaultExperimentName(scenarios.length + 1);
                 }
             })
             .catch(error => {
@@ -948,24 +1155,64 @@
             .then(data => {
                 if (data.success) {
                     updateSidebarScenarios();
-
-                    // Show success notification
-                    const notification = document.createElement('div');
-                    notification.className = 'alert alert-success';
-                    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; transition: opacity 0.3s;';
-                    notification.innerHTML = '<strong>✓ Experiment deleted</strong>';
-                    document.body.appendChild(notification);
-
-                    setTimeout(() => {
-                        notification.style.opacity = '0';
-                        setTimeout(() => notification.remove(), 300);
-                    }, 2000);
                 }
             })
             .catch(error => {
                 console.error('Error deleting scenario:', error);
                 alert('Error deleting experiment. Please try again.');
             });
+    }
+
+    // Select all options in a filter
+    function selectAllFilter(filterType, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const multiSelect = multiSelects[filterType];
+        if (multiSelect) {
+            const options = multiSelect.container.querySelectorAll('.multi-select-option');
+            options.forEach(option => {
+                if (!option.classList.contains('selected')) {
+                    option.classList.add('selected');
+                }
+            });
+            multiSelect.updateValue();
+
+            // Update table for regular filters, chart for chart-brand filter
+            if (filterType === 'chart-brand') {
+                if (baselineData && simulatedData) {
+                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                }
+            } else {
+                renderEditableTable();
+                updateChangesSummary();
+            }
+        }
+    }
+
+    // Clear all selections in a filter
+    function clearFilter(filterType, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const multiSelect = multiSelects[filterType];
+        if (multiSelect) {
+            const options = multiSelect.container.querySelectorAll('.multi-select-option');
+            options.forEach(option => {
+                option.classList.remove('selected');
+            });
+            multiSelect.updateValue();
+
+            // Update table for regular filters, chart for chart-brand filter
+            if (filterType === 'chart-brand') {
+                if (baselineData && simulatedData) {
+                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                }
+            } else {
+                renderEditableTable();
+                updateChangesSummary();
+            }
+        }
     }
 
     // Reset all filters and changes to original uploaded data
@@ -977,9 +1224,18 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Initialize original table rows for comparison
+        originalTableRows = JSON.parse(JSON.stringify(tableRows));
+
         renderEditableTable();
         loadBaselineForecast();
         updateSidebarScenarios();
+
+        // Add event listener for percentage toggle
+        const percentageToggle = document.getElementById('percentageToggle');
+        if (percentageToggle) {
+            percentageToggle.addEventListener('change', togglePercentageView);
+        }
     });
 </script>
 {% endblock %}
