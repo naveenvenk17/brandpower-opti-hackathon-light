@@ -5,6 +5,7 @@ A comprehensive brand power simulation platform
 """
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
+from flask_session import Session
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -20,15 +21,32 @@ from frontend.utils import (
     roll_data_to_quarter,
     get_brands_from_data,
     lst_id_columns,
+    get_channel_groups,
+    aggregate_by_channel_groups,
 )
 
 app = Flask(__name__)
+
+# Configure server-side session to handle large session data
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_FILE_DIR'] = './flask_session/'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'brandcompass:'
 app.secret_key = os.urandom(24)
+
+# Initialize the session extension
+Session(app)
+
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# Create flask_session directory for server-side sessions
+if not os.path.exists('./flask_session/'):
+    os.makedirs('./flask_session/')
 
 ALLOWED_EXTENSIONS = {'csv'}
 
@@ -244,6 +262,9 @@ def analysis():
     filename = session['uploaded_file']
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
+    # Store filepath in session for historical data calculation
+    session['file_path'] = filepath
+
     try:
         df = pd.read_csv(filepath)
 
@@ -274,8 +295,9 @@ def analysis():
 
         session['baseline_data'] = baseline_data
 
-        # Build editable table data: only ID columns and optimizable features present
+        # Build editable table data: ID columns + GROUPED features
         optimizable_features = get_optimizable_columns()
+        channel_groups = get_channel_groups()
 
         present_id_columns = []
         for id_col in lst_id_columns:
@@ -286,10 +308,15 @@ def analysis():
             elif id_col.upper() in df.columns:
                 present_id_columns.append(id_col.upper())
 
-        feature_columns = [c for c in optimizable_features if c in df.columns]
-        display_columns = present_id_columns + feature_columns
+        # Aggregate by channel groups
+        df_aggregated = aggregate_by_channel_groups(df)
 
-        table_df = df[display_columns].copy() if display_columns else df.copy()
+        # Use grouped column names instead of individual features
+        grouped_feature_columns = list(channel_groups.keys())
+        display_columns = present_id_columns + grouped_feature_columns
+
+        table_df = df_aggregated[display_columns].copy(
+        ) if display_columns else df_aggregated.copy()
         # limit rows for UI responsiveness
         table_rows = table_df.to_dict(orient='records')[:500]
 
@@ -308,13 +335,14 @@ def analysis():
             data_preview=df.head(10).to_html(
                 classes='table table-striped', index=False),
             id_columns=present_id_columns,
-            feature_columns=feature_columns,
+            feature_columns=grouped_feature_columns,
             table_columns=display_columns,
             table_rows=table_rows,
             brand_col=brand_col_name,
             year_col=year_col_name,
             month_col=month_col_name,
-            week_col=week_col_name
+            week_col=week_col_name,
+            channel_groups=channel_groups
         )
     except Exception as e:
         return redirect(url_for('index'))
@@ -371,6 +399,7 @@ def calculate():
 
         # Compute user changes from edited rows vs original sums
         optimizable = get_optimizable_columns()
+        channel_groups_dict = get_channel_groups()
         edited_rows = data.get('edited_rows', [])
         edited_columns = data.get('columns', [])
 
@@ -390,16 +419,45 @@ def calculate():
                 if week_col and week_col in edited_df.columns and sel_weeks:
                     edited_df = edited_df[edited_df[week_col].isin(sel_weeks)]
 
-                for feat in optimizable:
-                    if feat in df_filt.columns and feat in edited_df.columns:
-                        orig_sum = float(df_filt[feat].sum())
-                        new_sum = float(edited_df[feat].sum())
-                        if orig_sum != 0:
-                            user_changes[feat] = (
-                                (new_sum - orig_sum) / orig_sum) * 100.0
-                        else:
-                            user_changes[feat] = 0.0
-            except Exception:
+                # Aggregate original data by channel groups for comparison
+                df_filt_aggregated = aggregate_by_channel_groups(df_filt)
+
+                # Check if we're working with grouped or individual columns
+                grouped_cols = list(channel_groups_dict.keys())
+                is_grouped = any(
+                    col in edited_df.columns for col in grouped_cols)
+
+                if is_grouped:
+                    # Working with grouped data - compare grouped sums
+                    for group_name in grouped_cols:
+                        if group_name in edited_df.columns and group_name in df_filt_aggregated.columns:
+                            orig_sum = float(
+                                df_filt_aggregated[group_name].sum())
+                            new_sum = float(edited_df[group_name].sum())
+                            if orig_sum != 0:
+                                # Store changes at group level - will be applied to all components
+                                pct_change = (
+                                    (new_sum - orig_sum) / orig_sum) * 100.0
+                                user_changes[group_name] = pct_change
+                                # Also apply same change to all individual features in this group
+                                for feat in channel_groups_dict[group_name]:
+                                    if feat in df_filt.columns:
+                                        user_changes[feat] = pct_change
+                            else:
+                                user_changes[group_name] = 0.0
+                else:
+                    # Working with individual features
+                    for feat in optimizable:
+                        if feat in df_filt.columns and feat in edited_df.columns:
+                            orig_sum = float(df_filt[feat].sum())
+                            new_sum = float(edited_df[feat].sum())
+                            if orig_sum != 0:
+                                user_changes[feat] = (
+                                    (new_sum - orig_sum) / orig_sum) * 100.0
+                            else:
+                                user_changes[feat] = 0.0
+            except Exception as e:
+                print(f"Error processing edited rows: {e}")
                 user_changes = {}
         else:
             user_changes = data.get('changes', {}) or {}
@@ -407,13 +465,252 @@ def calculate():
         simulated_data = simulate_outcomes_from_changes(
             baseline_data, user_changes) if baseline_data else None
 
-        quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
+        # Calculate historical data (rolled up quarterly) from uploaded file
+        historical_data = {}
+        historical_quarters = []
+        try:
+            print("\n" + "="*80)
+            print("=== HISTORICAL DATA CALCULATION - START ===")
+            print("="*80)
+
+            print("\n--- READING COMPLETE UPLOADED FILE (NO FILTERS) ---")
+            # Read the complete original file from session (before any filtering)
+            file_path = session.get('file_path')
+            if not file_path or not os.path.exists(file_path):
+                print("ERROR: No uploaded file found in session!")
+                raise FileNotFoundError("Uploaded file not accessible")
+
+            print(f"Reading full data from: {file_path}")
+            df_full = pd.read_csv(file_path)
+
+            print("\n--- BEFORE ROLLUP: Complete Original Data ---")
+            print(f"Complete df shape: {df_full.shape}")
+            print(f"Complete df columns: {df_full.columns.tolist()}")
+            print(f"Brand column name: '{brand_col}'")
+            print(f"Year column name: '{year_col}'")
+            print(f"Month column name: '{month_col}'")
+            print(f"\nFirst 5 rows of key columns:")
+            if brand_col and year_col and month_col:
+                print(df_full[[brand_col, year_col, month_col]].head())
+            print(
+                f"\nUnique years in FULL data: {sorted(df_full[year_col].unique().tolist()) if year_col in df_full.columns else 'N/A'}")
+            print(
+                f"Unique months in FULL data: {sorted(df_full[month_col].unique().tolist()) if month_col in df_full.columns else 'N/A'}")
+            print(
+                f"Unique brands in FULL data: {sorted(df_full[brand_col].unique().tolist()) if brand_col in df_full.columns else 'N/A'}")
+
+            # Check date range
+            if year_col in df_full.columns and month_col in df_full.columns:
+                print(f"\nDate range in FULL data:")
+                print(
+                    f"  Earliest: {df_full[year_col].min()}-{df_full[month_col].min()}")
+                print(
+                    f"  Latest: {df_full[year_col].max()}-{df_full[month_col].max()}")
+
+            print("\n--- CALLING roll_data_to_quarter() ON COMPLETE DATA ---")
+            # Roll up COMPLETE data quarterly (not the filtered df)
+            df_quarterly = roll_data_to_quarter(df_full)
+
+            print("\n--- AFTER ROLLUP: Quarterly Data ---")
+            print(f"Quarterly df shape: {df_quarterly.shape}")
+            print(f"Quarterly df columns: {df_quarterly.columns.tolist()}")
+
+            # Check for quarter column (could be 'quarter' or 'Quarter')
+            quarter_col = 'quarter' if 'quarter' in df_quarterly.columns else 'Quarter' if 'Quarter' in df_quarterly.columns else None
+            print(f"Quarter column name: '{quarter_col}'")
+
+            if not df_quarterly.empty:
+                print(f"\nFirst 10 rows of quarterly data:")
+                print(df_quarterly.head(10))
+
+                if quarter_col:
+                    print(
+                        f"\nUnique quarters: {sorted(df_quarterly[quarter_col].unique().tolist())}")
+                if year_col in df_quarterly.columns:
+                    print(
+                        f"Unique years after rollup: {sorted(df_quarterly[year_col].unique().tolist())}")
+
+            print("\n--- MERGE LOGIC ---")
+            if year_col in df_quarterly.columns and quarter_col and brand_col in df_quarterly.columns:
+                print(f"✓ All required columns present for merge:")
+                print(f"  - Year column: '{year_col}' - EXISTS")
+                print(f"  - Quarter column: '{quarter_col}' - EXISTS")
+                print(f"  - Brand column: '{brand_col}' - EXISTS")
+
+                # Create quarter labels
+                print(f"\nCreating quarter_label column...")
+                df_quarterly['quarter_label'] = df_quarterly[year_col].astype(
+                    str) + ' ' + df_quarterly[quarter_col].astype(str)
+                print(
+                    f"Sample quarter_label values: {df_quarterly['quarter_label'].head().tolist()}")
+
+                historical_quarters = sorted(
+                    df_quarterly['quarter_label'].unique().tolist())
+
+                print(f"\n--- HISTORICAL QUARTERS IDENTIFIED ---")
+                print(f"Total unique quarters: {len(historical_quarters)}")
+                print(f"Quarters list: {historical_quarters}")
+                print(f"\n--- BRANDS TO PROCESS ---")
+                print(f"Total brands: {len(brands_all)}")
+                print(f"Brands list: {brands_all}")
+
+                # Calculate AVERAGE POWER for each brand/quarter from the power column
+                print("\n--- CALCULATING AVERAGE BRAND POWER PER QUARTER ---")
+
+                # Find the power column (could be 'power', 'Power', 'brand_power', etc.)
+                power_col = None
+                for col_name in ['power', 'Power', 'brand_power', 'Brand_Power', 'POWER']:
+                    if col_name in df_quarterly.columns:
+                        power_col = col_name
+                        break
+
+                print(f"\nLooking for power column in quarterly data...")
+                print(f"Available columns: {df_quarterly.columns.tolist()}")
+                print(
+                    f"Power column found: '{power_col}'" if power_col else "ERROR: No power column found!")
+
+                if power_col:
+                    print(f"\n{'='*80}")
+                    print("PROCESSING EACH BRAND - CALCULATING AVERAGE POWER")
+                    print(f"{'='*80}")
+
+                    for idx, brand in enumerate(brands_all, 1):
+                        print(
+                            f"\n[{idx}/{len(brands_all)}] Processing Brand: '{brand}'")
+                        print(
+                            f"  Filtering quarterly data where {brand_col} == '{brand}'...")
+
+                        brand_data = df_quarterly[df_quarterly[brand_col] == brand]
+                        print(
+                            f"  → Found {len(brand_data)} quarterly records for this brand")
+
+                        if len(brand_data) > 0:
+                            print(
+                                f"  → Quarters present for {brand}: {sorted(brand_data['quarter_label'].unique().tolist())}")
+
+                        historical_values = []
+                        for quarter in historical_quarters:
+                            # Only include quarters from 2021 Q1 UP TO 2024 Q2 (intervention point)
+                            if quarter < '2021 Q1':
+                                print(
+                                    f"    ⊗ {quarter}: SKIPPING (before 2021 Q1)")
+                                continue
+                            if quarter > '2024 Q2':
+                                print(
+                                    f"    ⊗ {quarter}: SKIPPING (after intervention, will use forecast)")
+                                continue
+
+                            quarter_data = brand_data[brand_data['quarter_label'] == quarter]
+                            if not quarter_data.empty:
+                                # Calculate AVERAGE POWER from the power column
+                                power_value = quarter_data[power_col].mean()
+                                historical_values.append(power_value)
+                                print(
+                                    f"    ✓ {quarter}: avg power = {power_value:,.2f} (from {len(quarter_data)} rows)")
+                            else:
+                                print(
+                                    f"    ✗ {quarter}: NO DATA (skipping this quarter)")
+                        historical_data[brand] = historical_values
+                        print(
+                            f"  → Total values stored: {len(historical_values)}")
+
+                    print(f"\n{'='*80}")
+                    print("=== HISTORICAL POWER TABLE SUMMARY ===")
+                    print(f"{'='*80}")
+
+                    # Filter historical_quarters to only include 2021 Q1 to 2024 Q2
+                    historical_quarters = [
+                        q for q in historical_quarters if '2021 Q1' <= q <= '2024 Q2']
+                    print(
+                        f"Final historical quarters (2021 Q1 to 2024 Q2): {historical_quarters}")
+
+                    for brand, values in historical_data.items():
+                        non_zero = sum(1 for v in values if v > 0)
+                        avg_power = sum(values) / len(values) if values else 0
+                        print(
+                            f"{brand}: {len(values)} quarters ({non_zero} non-zero) | Avg Power: {avg_power:,.2f}")
+                else:
+                    print("\n" + "!"*80)
+                    print("ERROR: No power column found in data!")
+                    print("!"*80)
+                    print(
+                        "Expected column names: 'power', 'Power', 'brand_power', 'Brand_Power', 'POWER'")
+                    print(
+                        "This means the uploaded data does not contain a power column")
+            else:
+                print("\n" + "!"*80)
+                print("ERROR: Missing required columns after rollup!")
+                print("!"*80)
+                print(f"Required columns check:")
+                print(
+                    f"  - {year_col} present: {year_col in df_quarterly.columns if df_quarterly is not None else 'N/A'}")
+                print(f"  - quarter column present: {quarter_col is not None}")
+                print(
+                    f"  - {brand_col} present: {brand_col in df_quarterly.columns if df_quarterly is not None else 'N/A'}")
+
+                if df_quarterly is not None:
+                    print(
+                        f"\nActual columns in quarterly df: {df_quarterly.columns.tolist()}")
+        except FileNotFoundError as e:
+            print("\n" + "!"*80)
+            print(f"FILE NOT FOUND: Could not read uploaded file")
+            print("!"*80)
+            historical_data = {}
+            historical_quarters = []
+        except Exception as e:
+            print("\n" + "!"*80)
+            print(f"EXCEPTION in historical data calculation: {e}")
+            print("!"*80)
+            import traceback
+            traceback.print_exc()
+            historical_data = {}
+            historical_quarters = []
+
+        forecast_quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
 
         results = {
-            'baseline': baseline_data,
-            'simulated': simulated_data,
-            'quarters': quarters
+            'baseline': baseline_data if baseline_data else {},
+            'simulated': simulated_data if simulated_data else {},
+            'quarters': forecast_quarters,
+            'historical': historical_data if historical_data else {},
+            'historical_quarters': historical_quarters if historical_quarters else []
         }
+
+        print("\n" + "="*80)
+        print("=== FINAL RESPONSE SUMMARY ===")
+        print("="*80)
+        print(f"\n1. BASELINE DATA:")
+        print(f"   - Brands count: {len(results['baseline'])}")
+        print(f"   - Brands: {list(results['baseline'].keys())[:5]}..." if len(
+            results['baseline']) > 5 else f"   - Brands: {list(results['baseline'].keys())}")
+
+        print(f"\n2. SIMULATED DATA:")
+        print(f"   - Brands count: {len(results['simulated'])}")
+        print(f"   - Brands: {list(results['simulated'].keys())[:5]}..." if len(
+            results['simulated']) > 5 else f"   - Brands: {list(results['simulated'].keys())}")
+
+        print(f"\n3. FORECAST PERIODS:")
+        print(f"   - Quarters: {results['quarters']}")
+
+        print(f"\n4. HISTORICAL DATA:")
+        print(f"   - Brands count: {len(results['historical'])}")
+        print(f"   - Brands: {list(results['historical'].keys())[:5]}..." if len(
+            results['historical']) > 5 else f"   - Brands: {list(results['historical'].keys())}")
+        print(f"   - Historical quarters: {results['historical_quarters']}")
+
+        print(f"\n5. DATA ALIGNMENT CHECK:")
+        print(
+            f"   - Historical quarters == Forecast quarters? {results['historical_quarters'] == results['quarters']}")
+        if results['historical_quarters'] == results['quarters']:
+            print(
+                f"   ⚠ WARNING: No pre-intervention historical data! Both cover same period.")
+        else:
+            print(
+                f"   ✓ Good: Historical data is from different time period than forecast")
+
+        print("\n" + "="*80)
+        print("=== END OF CALCULATION ===")
+        print("="*80 + "\n")
 
         return jsonify(results)
     except Exception as e:
@@ -433,7 +730,11 @@ def save_experiment():
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'baseline_data': data.get('baseline_data'),
         'simulated_data': data.get('simulated_data'),
-        'changes': data.get('changes')
+        'changes': data.get('changes'),
+        # Store actual user values
+        'user_entered_data': data.get('user_entered_data'),
+        'table_columns': data.get('table_columns'),
+        'table_rows': data.get('table_rows')
     }
 
     session['experiments'].append(experiment)
@@ -469,24 +770,107 @@ def clear_experiments():
     return jsonify({'success': True})
 
 
+@app.route('/debug_experiments')
+def debug_experiments():
+    """Debug endpoint to see experiment data structure"""
+    experiments = session.get('experiments', [])
+
+    if not experiments:
+        return jsonify({'message': 'No experiments found'})
+
+    # Return structure of first experiment
+    exp = experiments[0]
+    debug_info = {
+        'experiment_name': exp.get('name'),
+        'has_table_rows': bool(exp.get('table_rows')),
+        'table_rows_count': len(exp.get('table_rows', [])),
+        'table_columns': exp.get('table_columns', []),
+        'sample_table_row': exp.get('table_rows', [{}])[0] if exp.get('table_rows') else {},
+        'baseline_brands': list(exp.get('baseline_data', {}).keys())[:5],
+        'channel_groups': list(get_channel_groups().keys())
+    }
+
+    return jsonify(debug_info)
+
+
 @app.route('/export_experiments')
 def export_experiments():
-    """Export all experiments to Excel"""
+    """Export all experiments to Excel with quarterly data"""
     experiments = session.get('experiments', [])
 
     if not experiments:
         return jsonify({'error': 'No experiments to export'}), 400
 
     output = io.BytesIO()
+    channel_groups = get_channel_groups()
 
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for i, exp in enumerate(experiments):
-            data = {
-                'Experiment': [exp['name']],
-                'Timestamp': [exp['timestamp']]
-            }
-            df = pd.DataFrame(data)
-            df.to_excel(writer, sheet_name=f"Experiment_{i+1}", index=False)
+            # Create sheet name (limit to 31 characters)
+            sheet_name = f"Exp_{i+1}_{exp['name'][:20]}"  # Limit name length
+
+            # Get experiment data
+            baseline_data = exp.get('baseline_data', {})
+            simulated_data = exp.get('simulated_data', {})
+            table_rows = exp.get('table_rows', [])
+            table_columns = exp.get('table_columns', [])
+
+            # Create quarterly data structure
+            quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
+
+            # Prepare data for export
+            export_data = []
+
+            # Process each brand and quarter combination
+            for brand in baseline_data.keys():
+                baseline_values = baseline_data.get(brand, [])
+                simulated_values = simulated_data.get(brand, [])
+
+                for q_idx, quarter in enumerate(quarters):
+                    row = {
+                        'Brand': brand,
+                        'Quarter': quarter,
+                        'Baseline_Power': round(baseline_values[q_idx], 2) if q_idx < len(baseline_values) else 0,
+                        'Simulated_Power': round(simulated_values[q_idx], 2) if q_idx < len(simulated_values) else 0
+                    }
+
+                    # Add grouped channel values from user-entered data
+                    # Since we're working with grouped data, look for group columns directly
+                    for group_name in channel_groups.keys():
+                        group_total = 0
+                        # Find matching brand rows and sum the group values
+                        for table_row in table_rows:
+                            # Check if this row is for the current brand
+                            row_brand = table_row.get(
+                                'brand', '') or table_row.get('Brand', '')
+                            if row_brand.upper() == brand.upper():
+                                # Get the grouped channel value directly
+                                if group_name in table_row:
+                                    group_total += float(table_row.get(group_name, 0))
+
+                        row[f'{group_name}_Spend'] = round(group_total, 2)
+
+                    # Debug: Add some debugging info to see what data we have
+                    if i == 0 and q_idx == 0:  # Only for first experiment and first quarter
+                        print(f"DEBUG Export - Brand: {brand}")
+                        print(f"DEBUG Export - Table columns: {table_columns}")
+                        print(
+                            f"DEBUG Export - Sample table row: {table_rows[0] if table_rows else 'No rows'}")
+                        print(
+                            f"DEBUG Export - Channel groups: {list(channel_groups.keys())}")
+                        print(f"DEBUG Export - Row data: {row}")
+
+                    export_data.append(row)
+
+            # Create DataFrame and export
+            if export_data:
+                df = pd.DataFrame(export_data)
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+            else:
+                # Fallback if no data
+                empty_df = pd.DataFrame(
+                    {'Message': ['No data available for this experiment']})
+                empty_df.to_excel(writer, sheet_name=sheet_name, index=False)
 
     output.seek(0)
     return send_file(

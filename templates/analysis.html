@@ -10,6 +10,52 @@
         padding: 0;
     }
 
+    /* Tooltip styles for grouped columns */
+    .grouped-column-header {
+        position: relative;
+        cursor: help;
+    }
+
+    .tooltip-hover {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f2937;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        margin-bottom: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .tooltip-hover::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #1f2937;
+    }
+
+    .grouped-column-header:hover .tooltip-hover {
+        opacity: 1;
+    }
+
+    .info-icon {
+        font-size: 0.8em;
+        color: #6b7280;
+        margin-left: 4px;
+        font-weight: normal;
+    }
+
     .main-content {
         padding: 0 !important;
     }
@@ -450,18 +496,22 @@
 <!-- Server-provided data for JS -->
 <div id="server-data" data-table-columns='{{ table_columns | tojson | safe if table_columns is defined else "[]" }}'
     data-table-rows='{{ table_rows | tojson | safe if table_rows is defined else "[]" }}'
-    data-feature-columns='{{ feature_columns | tojson | safe if feature_columns is defined else "[]" }}'>
+    data-feature-columns='{{ feature_columns | tojson | safe if feature_columns is defined else "[]" }}'
+    data-channel-groups='{{ channel_groups | tojson | safe if channel_groups is defined else "{}" }}'>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
     let baselineData = null;
     let simulatedData = null;
+    let historicalData = null;
+    let historicalQuarters = null;
     let currentChanges = {};
     const __serverEl = document.getElementById('server-data');
     let tableColumns = JSON.parse((__serverEl && __serverEl.dataset.tableColumns) ? __serverEl.dataset.tableColumns : '[]');
     let tableRows = JSON.parse((__serverEl && __serverEl.dataset.tableRows) ? __serverEl.dataset.tableRows : '[]');
     let featureColumns = JSON.parse((__serverEl && __serverEl.dataset.featureColumns) ? __serverEl.dataset.featureColumns : '[]');
+    let channelGroups = JSON.parse((__serverEl && __serverEl.dataset.channelGroups) ? __serverEl.dataset.channelGroups : '{}');
 
     function renderEditableTable() {
         const container = document.getElementById('editableTable');
@@ -514,9 +564,24 @@
             }
         });
 
-        // Second pass: build HTML
+        // Second pass: build HTML with tooltips for grouped columns
         let html = '<table class="table table-striped"><thead><tr>';
-        tableColumns.forEach(col => { html += `<th>${col}</th>`; });
+        tableColumns.forEach(col => {
+            // Check if this column is a grouped channel
+            if (channelGroups[col]) {
+                const components = channelGroups[col].map(c => {
+                    // Format component names nicely (capitalize first letter, replace underscores)
+                    return c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, ' ');
+                }).join(', ');
+                html += `<th class="grouped-column-header">
+                    ${col}
+                    <span class="info-icon">ⓘ</span>
+                    <div class="tooltip-hover">Components: ${components}</div>
+                </th>`;
+            } else {
+                html += `<th>${col}</th>`;
+            }
+        });
         html += '</tr></thead><tbody>';
 
         filteredRowIndices.forEach(rIdx => {
@@ -695,6 +760,8 @@
             .then(data => {
                 baselineData = data.baseline;
                 simulatedData = data.simulated;
+                historicalData = data.historical || {};
+                historicalQuarters = data.historical_quarters || [];
                 displayResults(data);
             })
             .catch(error => {
@@ -710,6 +777,12 @@
         const quarters = data.quarters;
         const baseline = data.baseline;
         const simulated = data.simulated;
+        const historical = data.historical || {};
+        const historicalQuarters = data.historical_quarters || [];
+
+        console.log('=== DISPLAY RESULTS ===');
+        console.log('Historical data received:', historical);
+        console.log('Historical quarters received:', historicalQuarters);
 
         let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
         tableHTML += '<th>Brand</th>';
@@ -743,43 +816,303 @@
         document.getElementById('resultsTable').innerHTML = tableHTML;
 
         populateBrandFilter(Object.keys(baseline));
-        createChart(baseline, simulated, quarters);
+        createChart(baseline, simulated, quarters, historical, historicalQuarters);
     }
 
-    function createChart(baseline, simulated, quarters) {
+    function createChart(baseline, simulated, quarters, historical = {}, historicalQuarters = []) {
         const traces = [];
+
+        // Defensive checks
+        if (!baseline || typeof baseline !== 'object') {
+            console.error('Baseline data is invalid:', baseline);
+            return;
+        }
+
+        if (!simulated || typeof simulated !== 'object') {
+            console.error('Simulated data is invalid:', simulated);
+            return;
+        }
+
         const selected = multiSelects['chart-brand'] ? multiSelects['chart-brand'].getSelectedValues() : [];
         const brandsToShow = selected.length ? selected : Object.keys(baseline);
 
-        brandsToShow.forEach((brand, i) => {
-            traces.push({
-                x: quarters,
-                y: baseline[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Baseline`,
-                line: { width: 3 },
-                marker: { size: 8 }
-            });
+        console.log('=== CHART DATA ===');
+        console.log('Historical quarters:', historicalQuarters);
+        console.log('Forecast quarters:', quarters);
+        console.log('Brands to show:', brandsToShow);
+        console.log('Baseline keys:', Object.keys(baseline));
+        console.log('Simulated keys:', Object.keys(simulated));
+        console.log('Historical keys:', Object.keys(historical));
 
-            traces.push({
-                x: quarters,
-                y: simulated[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Simulated`,
-                line: { width: 3, dash: 'dash' },
-                marker: { size: 8, symbol: 'diamond' }
-            });
-        });
+        if (!brandsToShow || brandsToShow.length === 0) {
+            console.error('No brands to show');
+            return;
+        }
 
-        const layout = {
-            title: 'Baseline vs Simulated Power Forecast',
-            xaxis: { title: 'Quarter' },
-            yaxis: { title: 'Power' },
-            height: 500,
-            hovermode: 'x unified'
+        // Margin of error percentages for each quarter (starts at 0% for 2024 Q2)
+        const marginOfError = {
+            '2024 Q2': 0.00,  // 0% at intervention point
+            '2024 Q3': 0.01,  // 1%
+            '2024 Q4': 0.02,  // 2%
+            '2025 Q1': 0.03,  // 3%
+            '2025 Q2': 0.04   // 4%
         };
 
-        Plotly.newPlot('chartContainer', traces, layout);
+        brandsToShow.forEach((brand, i) => {
+            // Historical data (pre-intervention) - DEEP BLUE solid line (thicker)
+            const hasHistoricalData = historical && historical[brand] && historicalQuarters && historicalQuarters.length > 0;
+
+            if (hasHistoricalData) {
+                traces.push({
+                    x: historicalQuarters,
+                    y: historical[brand],
+                    mode: 'lines+markers',
+                    name: `${brand} - Historical`,
+                    line: { width: 3, color: '#0072B2' },  // Deep Blue
+                    marker: { size: 6, color: '#0072B2', symbol: 'circle' },
+                    connectgaps: false
+                });
+                console.log(`${brand} Historical:`, historical[brand]);
+            }
+
+            // Baseline forecast (post-intervention) - AMBER solid line with margin of error
+            if (baseline[brand] && Array.isArray(baseline[brand])) {
+                let baselineX = quarters;
+                let baselineY = baseline[brand];
+
+                // Connect from 2024 Q2 (last historical point) with 0% error
+                if (hasHistoricalData && historical[brand].length > 0) {
+                    const lastHistoricalQ = historicalQuarters[historicalQuarters.length - 1];
+                    const lastHistoricalValue = historical[brand][historical[brand].length - 1];
+
+                    // Prepend 2024 Q2 connection point
+                    baselineX = [lastHistoricalQ, ...quarters];
+                    baselineY = [lastHistoricalValue, ...baseline[brand]];
+                }
+
+                // Calculate margin of error bounds (starts from 0% at 2024 Q2)
+                const baselineLower = baselineY.map((val, idx) => {
+                    const margin = marginOfError[baselineX[idx]] || 0;
+                    return val * (1 - margin);
+                });
+                const baselineUpper = baselineY.map((val, idx) => {
+                    const margin = marginOfError[baselineX[idx]] || 0;
+                    return val * (1 + margin);
+                });
+
+                // Add lower bound (invisible line)
+                traces.push({
+                    x: baselineX,
+                    y: baselineLower,
+                    mode: 'lines',
+                    name: `${brand} - Baseline Lower`,
+                    line: { width: 0 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add upper bound with fill to create shaded region
+                traces.push({
+                    x: baselineX,
+                    y: baselineUpper,
+                    mode: 'lines',
+                    name: `${brand} - Baseline Upper`,
+                    line: { width: 0 },
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(230, 159, 0, 0.2)',  // Amber with transparency
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add main baseline line on top
+                traces.push({
+                    x: baselineX,
+                    y: baselineY,
+                    mode: 'lines+markers',
+                    name: `${brand} - Baseline Forecast`,
+                    line: { width: 2, color: '#E69F00' },  // Amber
+                    marker: { size: 6, color: '#E69F00', symbol: 'circle' },
+                    connectgaps: true
+                });
+                console.log(`${brand} Baseline:`, baseline[brand]);
+            } else {
+                console.warn(`${brand} baseline data is missing or invalid`);
+            }
+
+            // Simulated forecast (post-intervention) - TEAL-GREEN solid line with margin of error
+            if (simulated[brand] && Array.isArray(simulated[brand])) {
+                let simulatedX = quarters;
+                let simulatedY = simulated[brand];
+
+                // Connect from 2024 Q2 (last historical point) with 0% error
+                if (hasHistoricalData && historical[brand].length > 0) {
+                    const lastHistoricalQ = historicalQuarters[historicalQuarters.length - 1];
+                    const lastHistoricalValue = historical[brand][historical[brand].length - 1];
+
+                    // Prepend 2024 Q2 connection point
+                    simulatedX = [lastHistoricalQ, ...quarters];
+                    simulatedY = [lastHistoricalValue, ...simulated[brand]];
+                }
+
+                // Calculate margin of error bounds (starts from 0% at 2024 Q2)
+                const simulatedLower = simulatedY.map((val, idx) => {
+                    const margin = marginOfError[simulatedX[idx]] || 0;
+                    return val * (1 - margin);
+                });
+                const simulatedUpper = simulatedY.map((val, idx) => {
+                    const margin = marginOfError[simulatedX[idx]] || 0;
+                    return val * (1 + margin);
+                });
+
+                // Add lower bound (invisible line)
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedLower,
+                    mode: 'lines',
+                    name: `${brand} - Simulated Lower`,
+                    line: { width: 0 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add upper bound with fill to create shaded region
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedUpper,
+                    mode: 'lines',
+                    name: `${brand} - Simulated Upper`,
+                    line: { width: 0 },
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(0, 158, 115, 0.2)',  // Teal-Green with transparency
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add main simulated line on top (NO uplift fill between baseline and simulated)
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedY,
+                    mode: 'lines+markers',
+                    name: `${brand} - Simulated`,
+                    line: { width: 2, color: '#009E73' },  // Teal-Green
+                    marker: { size: 6, color: '#009E73', symbol: 'circle' },
+                    connectgaps: true
+                    // NO fill property - removed uplift coloring
+                });
+                console.log(`${brand} Simulated:`, simulated[brand]);
+            } else {
+                console.warn(`${brand} simulated data is missing or invalid`);
+            }
+        });
+
+        if (traces.length === 0) {
+            console.error('No traces to plot');
+            document.getElementById('chartContainer').innerHTML = '<div class="alert alert-warning">No data available to display chart</div>';
+            return;
+        }
+
+        // Check if we have historical data
+        const hasHistoricalData = historicalQuarters && historicalQuarters.length > 0;
+
+        const layout = {
+            title: {
+                text: 'Brand Power: Historical & Forecast',
+                font: {
+                    size: 18,
+                    family: 'Arial, sans-serif',
+                    color: '#333'
+                }
+            },
+            xaxis: {
+                title: 'Quarter',
+                type: 'category',
+                showgrid: true,
+                gridcolor: '#E0E0E0',  // Light gray gridlines
+                gridwidth: 1
+            },
+            yaxis: {
+                title: 'Power',
+                showgrid: true,
+                gridcolor: '#E0E0E0',  // Light gray gridlines
+                gridwidth: 1
+            },
+            height: 600,
+            plot_bgcolor: 'white',  // White background
+            paper_bgcolor: 'white',  // White background
+            hovermode: 'x unified',
+            showlegend: true,
+            legend: {
+                x: 1.05,
+                y: 1,
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                bordercolor: '#E0E0E0',
+                borderwidth: 1
+            },
+            dragmode: 'zoom',  // Enable zoom mode
+            margin: {
+                l: 80,
+                r: 150,
+                t: 80,
+                b: 80
+            }
+        };
+
+        // Configure chart to be responsive and allow zoom/pan
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToAdd: ['pan2d', 'select2d', 'lasso2d'],
+            modeBarButtonsToRemove: [],
+            displaylogo: false,
+            toImageButtonOptions: {
+                format: 'png',
+                filename: 'brand_power_forecast',
+                height: 800,
+                width: 1200,
+                scale: 1
+            }
+        };
+
+        // Add intervention line at 2024 Q2 - BURNT ORANGE dashed line
+        if (hasHistoricalData) {
+            layout.shapes = [
+                {
+                    type: 'line',
+                    x0: '2024 Q2',
+                    x1: '2024 Q2',
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    xref: 'x',
+                    line: {
+                        color: '#D55E00',  // Burnt Orange
+                        width: 2,
+                        dash: 'dash'  // Dashed line
+                    }
+                }
+            ];
+            layout.annotations = [
+                {
+                    x: '2024 Q2',
+                    y: 1.05,
+                    yref: 'paper',
+                    xref: 'x',
+                    text: 'Intervention',
+                    showarrow: false,
+                    font: {
+                        color: '#D55E00',  // Burnt Orange
+                        size: 14,
+                        family: 'Arial, sans-serif',
+                        weight: 'bold'
+                    },
+                    xanchor: 'center',
+                    yanchor: 'bottom'
+                }
+            ];
+        }
+
+        console.log('Plotting with', traces.length, 'traces');
+        Plotly.newPlot('chartContainer', traces, layout, config);
     }
 
     function saveExperiment() {
@@ -817,7 +1150,10 @@
                 name: name,
                 baseline_data: baselineData,
                 simulated_data: simulatedData,
-                changes: currentChanges
+                changes: currentChanges,
+                user_entered_data: tableRows,
+                table_columns: tableColumns,
+                table_rows: tableRows
             })
         })
             .then(response => response.json())
@@ -872,7 +1208,7 @@
                 option.addEventListener('click', () => {
                     setTimeout(() => {
                         if (baselineData && simulatedData) {
-                            createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                            createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []);
                         }
                     }, 50);
                 });
@@ -1039,6 +1375,12 @@
     function displayBaselineResults(data) {
         const quarters = data.quarters;
         const baseline = data.baseline;
+        const historical = data.historical || {};
+        const historicalQuarters = data.historical_quarters || [];
+
+        console.log('=== DISPLAY BASELINE RESULTS ===');
+        console.log('Historical data received:', historical);
+        console.log('Historical quarters received:', historicalQuarters);
 
         let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
         tableHTML += '<th>Brand</th>';
@@ -1064,7 +1406,7 @@
         document.getElementById('resultsSection').style.display = 'block';
 
         populateBrandFilter(Object.keys(baseline));
-        createChart(baseline, baseline, quarters);
+        createChart(baseline, baseline, quarters, historical, historicalQuarters);
     }
 
     // Update sidebar scenarios list
@@ -1181,7 +1523,7 @@
             // Update table for regular filters, chart for chart-brand filter
             if (filterType === 'chart-brand') {
                 if (baselineData && simulatedData) {
-                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []);
                 }
             } else {
                 renderEditableTable();
@@ -1206,7 +1548,7 @@
             // Update table for regular filters, chart for chart-brand filter
             if (filterType === 'chart-brand') {
                 if (baselineData && simulatedData) {
-                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                    createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []);
                 }
             } else {
                 renderEditableTable();

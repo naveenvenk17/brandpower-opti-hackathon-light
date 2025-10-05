@@ -10,6 +10,14 @@ lst_fixed_featured = ["avg_prcp", "consumer price index, core", "consumer_price_
 lst_id_columns = ["country", "brand", "year", "month", "week_of_month"]
 lst_target_columns = ["power"]
 
+channel_groups = {
+    "Digital": ["digitaldisplayandsearch", "digitalvideo", "meta", "tiktok", "twitter", "youtube"],
+    "Influencer": ["influencer"],
+    "TV": ["opentv", "paytv"],
+    "OOH_Audio": ["radio", "streamingaudio", "ooh"],
+    "Events_Sponsorship": ["brand events", "sponsorship", "others"]
+}
+
 
 def load_data(file_path):
     """Load CSV data from file path"""
@@ -271,6 +279,28 @@ def simulate_marketing_impact(baseline_data, adjustments=None):
 def get_optimizable_columns():
     """Return list of optimizable columns"""
     return lst_optimize_allowed_features
+
+
+def get_channel_groups():
+    """Return channel groups dictionary"""
+    return channel_groups
+
+
+def aggregate_by_channel_groups(df):
+    """Aggregate individual feature columns by channel groups"""
+    aggregated_df = df.copy()
+
+    for group_name, features in channel_groups.items():
+        # Sum all features in this group that exist in the dataframe
+        group_sum = pd.Series(0, index=df.index)
+        for feature in features:
+            if feature in df.columns:
+                group_sum += df[feature].fillna(0)
+
+        # Add the aggregated column
+        aggregated_df[group_name] = group_sum
+
+    return aggregated_df
 
 
 def get_brands_from_data(data):

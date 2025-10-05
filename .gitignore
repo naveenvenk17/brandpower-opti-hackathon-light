@@ -147,6 +147,9 @@ data/
 *_FIX.md
 *_REPORT.md
 
+# Flask session files
+flask_session/
+
 # Backup files
 *.bak
 *.backup
