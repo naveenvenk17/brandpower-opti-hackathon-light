@@ -185,7 +185,7 @@
 
 
 
-    <section class="mb-5">
+        <section class="mb-5">
             <h2 class="section-header">Adjust Marketing Spend</h2>
 
             <div class="card">
@@ -210,16 +210,16 @@
                                 </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% set default_brand = 'AGUILA' %}
-                            {% for brand in brands %}
+                                    {% for brand in brands %}
                                     <div class="multi-select-option {% if brand|upper == default_brand %}selected{% endif %}"
                                         data-value="{{ brand }}" data-filter-type="brand" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ brand }}</span>
                                     </div>
-                            {% endfor %}
-                    </div>
-                </div>
-            </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Year Filter Multi-Select -->
                         <div class="multi-select-container" data-filter="year">
@@ -239,16 +239,16 @@
                                     <input type="text" placeholder="Search years..." data-search="year">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
-                            {% for year in years %}
+                                    {% for year in years %}
                                     <div class="multi-select-option {% if year == 2024 %}selected{% endif %}"
                                         data-value="{{ year }}" data-filter-type="year" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ year }}</span>
                                     </div>
-                            {% endfor %}
-                    </div>
-                </div>
-            </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Month Filter Multi-Select -->
                         <div class="multi-select-container" data-filter="month">
@@ -270,17 +270,17 @@
                                 <div class="multi-select-options" role="listbox">
                                     {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
                                     'Oct', 'Nov', 'Dec'] %}
-                            {% for month in months %}
+                                    {% for month in months %}
                                     <div class="multi-select-option {% if month == 7 %}selected{% endif %}"
                                         data-value="{{ month }}" data-filter-type="month" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ month }} - {{ month_names[month - 1] if month >= 1 and month <= 12
                                                 else 'Month ' ~ month }}</span>
                                     </div>
-                            {% endfor %}
-                    </div>
-                </div>
-            </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Week Filter Multi-Select -->
                         <div class="multi-select-container" data-filter="week">
@@ -295,19 +295,19 @@
                                         All</button>
                                     <button class="filter-action-btn"
                                         onclick="clearFilter('week', event)">Clear</button>
-        </div>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search weeks..." data-search="week">
-                </div>
+                                </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% for week in weeks %}
                                     <div class="multi-select-option" data-value="{{ week }}" data-filter-type="week"
                                         role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>Week {{ week }}</span>
-            </div>
+                                    </div>
                                     {% endfor %}
-                </div>
+                                </div>
                             </div>
                         </div>
 
@@ -319,20 +319,20 @@
                     </div>
 
                     <div id="editableTable" class="table-container" style="max-height: 420px; overflow: auto;"></div>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="mb-5">
+        <section class="mb-5">
             <h2 class="section-header">Calculate Brand Power</h2>
 
-        <div class="card">
-            <div class="card-body">
+            <div class="card">
+                <div class="card-body">
                     <div style="display: flex; gap: 2rem; align-items: center;">
                         <div style="flex: 0 0 auto;">
                             <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;"
                                 onclick="calculatePower()">Calculate Brand Power</button>
-                </div>
+                        </div>
                         <div style="flex: 1;">
                             <div id="changesSummary"
                                 style="background: #f9fafb; padding: 1rem; border-radius: 6px; border-left: 3px solid #1e50a2;">
@@ -342,20 +342,20 @@
                                 <div id="changesList" style="font-size: 0.875rem; color: #6b7280;">
                                     <p style="text-align: center; color: #9ca3af; font-style: italic; margin: 0;">No
                                         changes made yet. Edit values in the table above to see changes here.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section id="resultsSection" class="mb-5" style="display: none;">
+        <section id="resultsSection" class="mb-5" style="display: none;">
             <h2 class="section-header">Results</h2>
 
-        <div class="card">
-            <div class="card-header">Quarterly Brand Power Forecast</div>
-            <div class="card-body">
+            <div class="card">
+                <div class="card-header">Quarterly Brand Power Forecast</div>
+                <div class="card-body">
                     <div id="resultsTable" style="max-height: 450px; overflow-y: auto;"></div>
                     <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
                         <label class="form-label" style="margin: 0;">Filter brands:</label>
@@ -381,70 +381,70 @@
                             </div>
                         </div>
                     </div>
-                <div id="chartContainer" class="mt-4"></div>
+                    <div id="chartContainer" class="mt-4"></div>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="mb-5">
+        <section class="mb-5">
             <h2 class="section-header">Save Current Experiment</h2>
 
-        <div class="card">
-            <div class="card-body">
+            <div class="card">
+                <div class="card-body">
                     <div style="display: flex; gap: 1rem; align-items: flex-end;">
                         <div class="form-group" style="flex: 1; margin: 0;">
-                        <label class="form-label">Experiment Name:</label>
+                            <label class="form-label">Experiment Name:</label>
                             <input type="text" id="experimentName" class="form-control" placeholder="Experiment_1">
-                    </div>
+                        </div>
                         <div style="flex: 0 0 auto;">
                             <button class="btn btn-accent" onclick="saveExperiment()"
                                 style="background: #B5942F; border-color: #B5942F; padding: 0.625rem 2rem;"
                                 onmouseover="this.style.background='#9d7d28'"
                                 onmouseout="this.style.background='#B5942F'">Save Experiment</button>
+                        </div>
                     </div>
+                    <div id="saveStatus" class="mt-3"></div>
                 </div>
-                <div id="saveStatus" class="mt-3"></div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <div class="text-center mb-5">
+        <div class="text-center mb-5">
             <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
 </div>
 
 <style>
-input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 8px;
-    background: linear-gradient(to right, var(--danger) 0%, var(--medium-gray) 50%, var(--success) 100%);
-    border-radius: 5px;
-    outline: none;
-}
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+        background: linear-gradient(to right, var(--danger) 0%, var(--medium-gray) 50%, var(--success) 100%);
+        border-radius: 5px;
+        outline: none;
+    }
 
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    background: var(--primary-blue);
-    border: 3px solid var(--white);
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: var(--shadow-md);
-}
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--primary-blue);
+        border: 3px solid var(--white);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+    }
 
-input[type="range"]::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    background: var(--primary-blue);
-    border: 3px solid var(--white);
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: var(--shadow-md);
-}
+    input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--primary-blue);
+        border: 3px solid var(--white);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+    }
 </style>
 
 <!-- Server-provided data for JS -->
@@ -455,9 +455,9 @@ input[type="range"]::-moz-range-thumb {
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-let baselineData = null;
-let simulatedData = null;
-let currentChanges = {};
+    let baselineData = null;
+    let simulatedData = null;
+    let currentChanges = {};
     const __serverEl = document.getElementById('server-data');
     let tableColumns = JSON.parse((__serverEl && __serverEl.dataset.tableColumns) ? __serverEl.dataset.tableColumns : '[]');
     let tableRows = JSON.parse((__serverEl && __serverEl.dataset.tableRows) ? __serverEl.dataset.tableRows : '[]');
@@ -657,21 +657,21 @@ let currentChanges = {};
             html += '</tbody></table>';
             changesListEl.innerHTML = html;
         }
-}
+    }
 
-function togglePercentageView() {
+    function togglePercentageView() {
         renderEditableTable();
-}
+    }
 
-function calculatePower() {
-    const resultsSection = document.getElementById('resultsSection');
-    resultsSection.style.display = 'none';
+    function calculatePower() {
+        const resultsSection = document.getElementById('resultsSection');
+        resultsSection.style.display = 'none';
 
-    const spinner = document.createElement('div');
-    spinner.innerHTML = '<div class="spinner"></div><p class="text-center">Calculating brand power...</p>';
-    document.getElementById('resultsTable').innerHTML = '';
-    document.getElementById('resultsTable').appendChild(spinner);
-    resultsSection.style.display = 'block';
+        const spinner = document.createElement('div');
+        spinner.innerHTML = '<div class="spinner"></div><p class="text-center">Calculating brand power...</p>';
+        document.getElementById('resultsTable').innerHTML = '';
+        document.getElementById('resultsTable').appendChild(spinner);
+        resultsSection.style.display = 'block';
 
         // gather filters from multi-select components
         const selBrands = multiSelects['brand'] ? multiSelects['brand'].getSelectedValues() : [];
@@ -679,54 +679,54 @@ function calculatePower() {
         const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
         const selWeeks = multiSelects['week'] ? multiSelects['week'].getSelectedValues().map(v => parseInt(v)) : [];
 
-    fetch('{{ url_for("calculate") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        fetch('{{ url_for("calculate") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
                 changes: currentChanges,
                 filters: { brands: selBrands, years: selYears, months: selMonths, weeks: selWeeks },
                 edited_rows: tableRows,
                 columns: tableColumns
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        baselineData = data.baseline;
-        simulatedData = data.simulated;
-        displayResults(data);
-    })
-    .catch(error => {
-        document.getElementById('resultsTable').innerHTML = `
+            .then(response => response.json())
+            .then(data => {
+                baselineData = data.baseline;
+                simulatedData = data.simulated;
+                displayResults(data);
+            })
+            .catch(error => {
+                document.getElementById('resultsTable').innerHTML = `
             <div class="alert alert-danger">
                 <strong>✗ Error:</strong> ${error.message}
             </div>
         `;
-    });
-}
+            });
+    }
 
-function displayResults(data) {
-    const quarters = data.quarters;
-    const baseline = data.baseline;
-    const simulated = data.simulated;
+    function displayResults(data) {
+        const quarters = data.quarters;
+        const baseline = data.baseline;
+        const simulated = data.simulated;
 
-    let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
-    tableHTML += '<th>Brand</th>';
-    quarters.forEach(q => {
-        tableHTML += `<th>${q}</th>`;
-    });
-    tableHTML += '</tr></thead><tbody>';
+        let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
+        tableHTML += '<th>Brand</th>';
+        quarters.forEach(q => {
+            tableHTML += `<th>${q}</th>`;
+        });
+        tableHTML += '</tr></thead><tbody>';
 
         // Show ALL brands, not just filtered ones
         const allBrands = Object.keys(baseline);
 
         allBrands.forEach(brand => {
-        tableHTML += `<tr><td><strong>${brand}</strong></td>`;
+            tableHTML += `<tr><td><strong>${brand}</strong></td>`;
 
-        baseline[brand].forEach((baseValue, i) => {
-            const simValue = simulated[brand][i];
-            const change = ((simValue - baseValue) / baseValue) * 100;
+            baseline[brand].forEach((baseValue, i) => {
+                const simValue = simulated[brand][i];
+                const change = ((simValue - baseValue) / baseValue) * 100;
                 const color = change >= 0 ? '#10b981' : '#ef4444';
                 tableHTML += `<td style="text-align: left;">
                     <span style="font-weight: 600;">${simValue.toFixed(2)}</span>
@@ -734,55 +734,55 @@ function displayResults(data) {
                         ${change > 0 ? '+' : ''}${change.toFixed(1)}%
                     </span>
                 </td>`;
+            });
+
+            tableHTML += '</tr>';
         });
 
-        tableHTML += '</tr>';
-    });
-
-    tableHTML += '</tbody></table></div>';
-    document.getElementById('resultsTable').innerHTML = tableHTML;
+        tableHTML += '</tbody></table></div>';
+        document.getElementById('resultsTable').innerHTML = tableHTML;
 
         populateBrandFilter(Object.keys(baseline));
-    createChart(baseline, simulated, quarters);
-}
+        createChart(baseline, simulated, quarters);
+    }
 
-function createChart(baseline, simulated, quarters) {
-    const traces = [];
+    function createChart(baseline, simulated, quarters) {
+        const traces = [];
         const selected = multiSelects['chart-brand'] ? multiSelects['chart-brand'].getSelectedValues() : [];
         const brandsToShow = selected.length ? selected : Object.keys(baseline);
 
         brandsToShow.forEach((brand, i) => {
-        traces.push({
-            x: quarters,
-            y: baseline[brand],
-            mode: 'lines+markers',
-            name: `${brand} - Baseline`,
-            line: { width: 3 },
-            marker: { size: 8 }
+            traces.push({
+                x: quarters,
+                y: baseline[brand],
+                mode: 'lines+markers',
+                name: `${brand} - Baseline`,
+                line: { width: 3 },
+                marker: { size: 8 }
+            });
+
+            traces.push({
+                x: quarters,
+                y: simulated[brand],
+                mode: 'lines+markers',
+                name: `${brand} - Simulated`,
+                line: { width: 3, dash: 'dash' },
+                marker: { size: 8, symbol: 'diamond' }
+            });
         });
 
-        traces.push({
-            x: quarters,
-            y: simulated[brand],
-            mode: 'lines+markers',
-            name: `${brand} - Simulated`,
-            line: { width: 3, dash: 'dash' },
-            marker: { size: 8, symbol: 'diamond' }
-        });
-    });
+        const layout = {
+            title: 'Baseline vs Simulated Power Forecast',
+            xaxis: { title: 'Quarter' },
+            yaxis: { title: 'Power' },
+            height: 500,
+            hovermode: 'x unified'
+        };
 
-    const layout = {
-        title: 'Baseline vs Simulated Power Forecast',
-        xaxis: { title: 'Quarter' },
-        yaxis: { title: 'Power' },
-        height: 500,
-        hovermode: 'x unified'
-    };
+        Plotly.newPlot('chartContainer', traces, layout);
+    }
 
-    Plotly.newPlot('chartContainer', traces, layout);
-}
-
-function saveExperiment() {
+    function saveExperiment() {
         let name = document.getElementById('experimentName').value.trim();
 
         // If empty, use the placeholder value
@@ -790,52 +790,52 @@ function saveExperiment() {
             name = document.getElementById('experimentName').placeholder;
         }
 
-    if (!name) {
-        document.getElementById('saveStatus').innerHTML = `
+        if (!name) {
+            document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-warning">
                 <strong>⚠ Please enter an experiment name.</strong>
             </div>
         `;
-        return;
-    }
+            return;
+        }
 
-    if (!baselineData || !simulatedData) {
-        document.getElementById('saveStatus').innerHTML = `
+        if (!baselineData || !simulatedData) {
+            document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-warning">
                 <strong>⚠ Please calculate results first.</strong>
             </div>
         `;
-        return;
-    }
+            return;
+        }
 
-    fetch('{{ url_for("save_experiment") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            name: name,
-            baseline_data: baselineData,
-            simulated_data: simulatedData,
-            changes: currentChanges
+        fetch('{{ url_for("save_experiment") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                baseline_data: baselineData,
+                simulated_data: simulatedData,
+                changes: currentChanges
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     document.getElementById('saveStatus').innerHTML = '';
                     // Update sidebar and set new default name
                     updateSidebarScenarios();
-        }
-    })
-    .catch(error => {
-        document.getElementById('saveStatus').innerHTML = `
+                }
+            })
+            .catch(error => {
+                document.getElementById('saveStatus').innerHTML = `
             <div class="alert alert-danger">
                 <strong>✗ Error:</strong> ${error.message}
             </div>
         `;
-    });
-}
+            });
+    }
 
     function populateBrandFilter(brands) {
         const optionsContainer = document.getElementById('chartBrandOptions');
