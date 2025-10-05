@@ -18,7 +18,8 @@ from werkzeug.utils import secure_filename
 from frontend.utils import (
     get_optimizable_columns,
     roll_data_to_quarter,
-    get_brands_from_data
+    get_brands_from_data,
+    lst_id_columns,
 )
 
 app = Flask(__name__)
@@ -122,7 +123,8 @@ def get_baseline_data_for_brands(baseline_df, brands):
                     (baseline_df['year'] == csv_year) &
                     (baseline_df['period'] == csv_period)
                 ]['power'].mean()
-                brand_values.append(quarter_avg if pd.notna(quarter_avg) else 15.0)
+                brand_values.append(
+                    quarter_avg if pd.notna(quarter_avg) else 15.0)
 
         baseline_data[brand] = brand_values
 
@@ -141,7 +143,8 @@ def simulate_outcomes_from_changes(baseline_data, user_changes=None):
             impact_factor = 1.0
             if user_changes:
                 total_change = sum(user_changes.values())
-                change_count = len([c for c in user_changes.values() if c != 0])
+                change_count = len(
+                    [c for c in user_changes.values() if c != 0])
                 if change_count > 0:
                     avg_change = total_change / change_count
                     impact_factor = 1 + (avg_change * 0.001)
@@ -240,9 +243,12 @@ def analysis():
                 ((df[year_col] == 2024) & (df[month_col] >= 7))
             ].copy()
 
-        brands = sorted(df[brand_col].unique().tolist()) if brand_col in df.columns else []
-        years = sorted(df[year_col].unique().tolist()) if year_col in df.columns else []
-        months = sorted(df[month_col].unique().tolist()) if month_col in df.columns else []
+        brands = sorted(df[brand_col].unique().tolist()
+                        ) if brand_col in df.columns else []
+        years = sorted(df[year_col].unique().tolist()
+                       ) if year_col in df.columns else []
+        months = sorted(df[month_col].unique().tolist()
+                        ) if month_col in df.columns else []
 
         baseline_df = load_baseline_forecast()
         baseline_data = None
@@ -251,13 +257,44 @@ def analysis():
 
         session['baseline_data'] = baseline_data
 
+        # Build editable table data: only ID columns and optimizable features present
+        optimizable_features = get_optimizable_columns()
+
+        present_id_columns = []
+        for id_col in lst_id_columns:
+            if id_col in df.columns:
+                present_id_columns.append(id_col)
+            elif id_col.capitalize() in df.columns:
+                present_id_columns.append(id_col.capitalize())
+            elif id_col.upper() in df.columns:
+                present_id_columns.append(id_col.upper())
+
+        feature_columns = [c for c in optimizable_features if c in df.columns]
+        display_columns = present_id_columns + feature_columns
+
+        table_df = df[display_columns].copy() if display_columns else df.copy()
+        # limit rows for UI responsiveness
+        table_rows = table_df.to_dict(orient='records')[:500]
+
+        # Determine canonical id column names present
+        brand_col_name = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
+        year_col_name = 'Year' if 'Year' in df.columns else 'year' if 'year' in df.columns else None
+        month_col_name = 'Month' if 'Month' in df.columns else 'month' if 'month' in df.columns else None
+
         return render_template(
             'analysis.html',
             brands=brands,
             years=years,
             months=months,
-            data_preview=df.head(10).to_html(classes='table table-striped', index=False),
-            optimizable_features=get_optimizable_columns()
+            data_preview=df.head(10).to_html(
+                classes='table table-striped', index=False),
+            id_columns=present_id_columns,
+            feature_columns=feature_columns,
+            table_columns=display_columns,
+            table_rows=table_rows,
+            brand_col=brand_col_name,
+            year_col=year_col_name,
+            month_col=month_col_name
         )
     except Exception as e:
         return redirect(url_for('index'))
@@ -277,14 +314,72 @@ def calculate():
     try:
         df = pd.read_csv(filepath)
 
-        brand_col = 'Brand' if 'Brand' in df.columns else 'brand'
-        brands = sorted(df[brand_col].unique().tolist()) if brand_col in df.columns else []
+        # Canonical column names
+        brand_col = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
+        year_col = 'Year' if 'Year' in df.columns else 'year' if 'year' in df.columns else None
+        month_col = 'Month' if 'Month' in df.columns else 'month' if 'month' in df.columns else None
 
+        # Apply standard date filter
+        if year_col in df.columns and month_col in df.columns:
+            df = df[(df[year_col] > 2024) | (
+                (df[year_col] == 2024) & (df[month_col] >= 7))].copy()
+
+        # Filters from client
+        filters = data.get('filters', {})
+        sel_brands = filters.get('brands', [])
+        sel_years = filters.get('years', [])
+        sel_months = filters.get('months', [])
+
+        df_filt = df.copy()
+        if brand_col and sel_brands:
+            df_filt = df_filt[df_filt[brand_col].isin(sel_brands)]
+        if year_col and sel_years:
+            df_filt = df_filt[df_filt[year_col].isin(sel_years)]
+        if month_col and sel_months:
+            df_filt = df_filt[df_filt[month_col].isin(sel_months)]
+
+        # Baseline per-brand power - get ALL brands from full dataset, not just filtered
+        brands_all = sorted(df[brand_col].unique(
+        ).tolist()) if brand_col in df.columns else []
         baseline_df = load_baseline_forecast()
-        baseline_data = get_baseline_data_for_brands(baseline_df, brands) if baseline_df is not None else None
+        baseline_data = get_baseline_data_for_brands(
+            baseline_df, brands_all) if baseline_df is not None else None
 
-        user_changes = data.get('changes', {})
-        simulated_data = simulate_outcomes_from_changes(baseline_data, user_changes) if baseline_data else None
+        # Compute user changes from edited rows vs original sums
+        optimizable = get_optimizable_columns()
+        edited_rows = data.get('edited_rows', [])
+        edited_columns = data.get('columns', [])
+
+        user_changes = {}
+        if edited_rows and edited_columns:
+            try:
+                edited_df = pd.DataFrame(edited_rows, columns=edited_columns)
+                # Apply same filters to edited data if those id columns exist
+                if brand_col and brand_col in edited_df.columns and sel_brands:
+                    edited_df = edited_df[edited_df[brand_col].isin(
+                        sel_brands)]
+                if year_col and year_col in edited_df.columns and sel_years:
+                    edited_df = edited_df[edited_df[year_col].isin(sel_years)]
+                if month_col and month_col in edited_df.columns and sel_months:
+                    edited_df = edited_df[edited_df[month_col].isin(
+                        sel_months)]
+
+                for feat in optimizable:
+                    if feat in df_filt.columns and feat in edited_df.columns:
+                        orig_sum = float(df_filt[feat].sum())
+                        new_sum = float(edited_df[feat].sum())
+                        if orig_sum != 0:
+                            user_changes[feat] = (
+                                (new_sum - orig_sum) / orig_sum) * 100.0
+                        else:
+                            user_changes[feat] = 0.0
+            except Exception:
+                user_changes = {}
+        else:
+            user_changes = data.get('changes', {}) or {}
+
+        simulated_data = simulate_outcomes_from_changes(
+            baseline_data, user_changes) if baseline_data else None
 
         quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
 
@@ -326,6 +421,26 @@ def list_experiments():
     """List saved experiments"""
     experiments = session.get('experiments', [])
     return jsonify(experiments)
+
+
+@app.route('/delete_experiment/<int:index>', methods=['POST'])
+def delete_experiment(index: int):
+    """Delete an experiment by index"""
+    experiments = session.get('experiments', [])
+    if 0 <= index < len(experiments):
+        experiments.pop(index)
+        session['experiments'] = experiments
+        session.modified = True
+        return jsonify({'success': True, 'experiment_count': len(experiments)})
+    return jsonify({'error': 'Invalid index'}), 400
+
+
+@app.route('/clear_experiments', methods=['POST'])
+def clear_experiments():
+    """Clear all experiments"""
+    session['experiments'] = []
+    session.modified = True
+    return jsonify({'success': True})
 
 
 @app.route('/export_experiments')

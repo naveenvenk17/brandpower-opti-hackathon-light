@@ -4,7 +4,7 @@ BrandCompass.ai - Welcome Page
 Brand analysis and simulation interface
 """
 
-from utils import get_optimizable_columns
+from utils import get_optimizable_columns, lst_id_columns
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -23,7 +23,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Configure page
 st.set_page_config(
     page_title="Welcome - BrandCompass.ai",
-    page_icon="🎯",
     layout="wide"
 )
 
@@ -34,41 +33,46 @@ if 'saved_experiments' not in st.session_state:
 # Custom CSS
 st.markdown("""
 <style>
+    /* Sleek minimalist theme */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
+        font-size: 2.2rem;
+        font-weight: 700;
         text-align: center;
-        color: #1f77b4;
-        margin-bottom: 2rem;
+        color: #0f172a; /* slate-900 */
+        margin-bottom: 1.5rem;
     }
     .section-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #2c3e50;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-        border-bottom: 2px solid #3498db;
-        padding-bottom: 0.5rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #111827; /* gray-900 */
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #e5e7eb; /* gray-200 */
+        padding-bottom: 0.4rem;
     }
     .metric-card {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #3498db;
-        margin: 1rem 0;
+        background-color: #f9fafb; /* gray-50 */
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        margin: 0.75rem 0;
     }
-    .increase {
-        background-color: #d4edda !important;
-        color: #155724 !important;
+    .stButton > button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
     }
-    .decrease {
-        background-color: #f8d7da !important;
-        color: #721c24 !important;
+    .stDownloadButton > button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
     }
-    .unchanged {
-        background-color: #e2e3e5 !important;
-        color: #383d41 !important;
+    .stDataFrame, .st-emotion-cache-1wbqy5l { /* keep tables compact */
+        font-size: 0.9rem;
     }
+    .increase { background-color: #ecfdf5 !important; color: #065f46 !important; }
+    .decrease { background-color: #fef2f2 !important; color: #991b1b !important; }
+    .unchanged { background-color: #f3f4f6 !important; color: #374151 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -481,15 +485,19 @@ def create_excel_export(experiments):
     return output
 
 
-def create_comparison_chart(baseline_data, simulated_data, quarters, selected_brand=None):
+def create_comparison_chart(baseline_data, simulated_data, quarters, selected_brands=None):
     """Create comparison chart for baseline vs simulated"""
     fig = make_subplots(
         rows=1, cols=1,
         subplot_titles=["Baseline vs Simulated Power Forecast"]
     )
 
-    brands_to_show = [selected_brand] if selected_brand else list(
-        baseline_data.keys())
+    if selected_brands is None or (isinstance(selected_brands, list) and len(selected_brands) == 0):
+        brands_to_show = list(baseline_data.keys())
+    elif isinstance(selected_brands, list):
+        brands_to_show = selected_brands
+    else:
+        brands_to_show = [selected_brands]
 
     colors = px.colors.qualitative.Set1
 
@@ -535,9 +543,52 @@ def create_comparison_chart(baseline_data, simulated_data, quarters, selected_br
 def main():
     """Main welcome page"""
 
-    # Create sidebar for experiments
+    # Create sidebar for scenarios
     with st.sidebar:
-        st.markdown("### 🧪 Saved Experiments")
+        st.markdown("### Scenarios")
+
+        # Save Scenario (compact)
+        existing_names = [exp['name']
+                          for exp in st.session_state.saved_experiments]
+        default_name = f"scenario_{len(st.session_state.saved_experiments) + 1}"
+        counter = 1
+        while default_name in existing_names:
+            counter += 1
+            default_name = f"scenario_{counter}"
+
+        scenario_name = st.text_input(
+            "Name",
+            value=default_name,
+            key="scenario_name_input",
+            help="Name for the current scenario"
+        )
+
+        save_clicked = st.button(
+            "Save Scenario",
+            type="secondary",
+            use_container_width=True,
+            key="save_scenario_btn"
+        )
+
+        if save_clicked:
+            if not scenario_name.strip():
+                st.error("Please enter a scenario name.")
+            elif len(st.session_state.saved_experiments) >= 5:
+                st.error(
+                    "Maximum of 5 scenarios allowed. Delete one to add a new one.")
+            elif not st.session_state.calculation_done:
+                st.warning("Run the calculation before saving a scenario.")
+            else:
+                experiment = save_experiment(
+                    scenario_name.strip(),
+                    st.session_state.baseline_data,
+                    st.session_state.simulated_data,
+                    st.session_state.original_data,
+                    st.session_state.column_changes
+                )
+                st.session_state.saved_experiments.append(experiment)
+                st.success("Scenario saved.")
+                st.rerun()
 
         # Display saved experiments
         if st.session_state.saved_experiments:
@@ -554,7 +605,7 @@ def main():
                     # Load and Delete experiment buttons
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button(f"📂 Load", key=f"load_{i}"):
+                        if st.button("Load", key=f"load_{i}"):
                             # Load experiment data into current working state
                             experiment = st.session_state.saved_experiments[i]
                             st.session_state.baseline_data = experiment.get(
@@ -567,44 +618,44 @@ def main():
                                 'column_changes')
                             st.session_state.calculation_done = True  # Mark as calculated
                             st.success(
-                                f"✅ Loaded experiment '{experiment['name']}'")
+                                f"Loaded scenario '{experiment['name']}'")
                             st.rerun()
 
                     with col2:
-                        if st.button(f"🗑️ Delete", key=f"delete_{i}"):
+                        if st.button("Delete", key=f"delete_{i}"):
                             experiment_name = st.session_state.saved_experiments[i]['name']
                             st.session_state.saved_experiments.pop(i)
                             st.success(
-                                f"🗑️ Deleted experiment '{experiment_name}'")
+                                f"Deleted scenario '{experiment_name}'")
                             st.rerun()
 
             # Export and Clear All buttons
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📊 Export All to Excel", type="primary"):
+                if st.button("Export All to Excel", type="primary"):
                     if st.session_state.saved_experiments:
                         excel_data = create_excel_export(
                             st.session_state.saved_experiments)
                         st.download_button(
-                            label="📥 Download Excel File",
+                            label="Download Excel File",
                             data=excel_data,
                             file_name=f"brandcompass_experiments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
             with col2:
-                if st.button("🗑️ Clear All Experiments", type="secondary"):
+                if st.button("Clear All Scenarios", type="secondary"):
                     experiment_count = len(st.session_state.saved_experiments)
                     st.session_state.saved_experiments = []
                     st.success(
-                        f"🗑️ Cleared all {experiment_count} experiments")
+                        f"Cleared all {experiment_count} scenarios")
         else:
-            st.info("No experiments saved yet. Save your first experiment below!")
+            st.info("No scenarios saved yet.")
 
     # Check if user came from home page
     if 'uploaded_data' not in st.session_state or st.session_state.uploaded_data is None:
         st.error(
-            "⚠️ No data found. Please go back to the home page and upload your data.")
-        if st.button("🏠 Go to Home"):
+            "No data found. Please go back to the home page and upload your data.")
+        if st.button("Go to Home"):
             st.switch_page("BrandCompass.py")
         return
 
@@ -625,7 +676,7 @@ def main():
         st.session_state.column_changes = None
 
     # Header
-    st.markdown('<h1 class="main-header">🎯 Welcome to Analysis</h1>',
+    st.markdown('<h1 class="main-header">Welcome to Analysis</h1>',
                 unsafe_allow_html=True)
 
     # Get uploaded data and filter from July 2024 onwards
@@ -666,18 +717,18 @@ def main():
         st.session_state.calculation_done = True  # Show results immediately
 
     # Section: Inputs
-    st.markdown('<div class="section-header">🎛️ Analysis Parameters</div>',
+    st.markdown('<div class="section-header">Analysis Parameters</div>',
                 unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
         # Brand multi-select
-        st.markdown("**📊 Select Brands:**")
+        st.markdown("**Select Brands:**")
         selected_brands = st.multiselect(
             "Choose brands for analysis:",
             brands,
-            default=[brands[0]] if brands else [],  # Default to first brand
+            default=brands if brands else [],
             help="Select one or more brands for analysis"
         )
 
@@ -685,11 +736,11 @@ def main():
         # Year multi-select
         years = sorted(df_filtered[year_col].unique().tolist()
                        ) if year_col in df_filtered.columns else [2024, 2025]
-        st.markdown("**📅 Select Years:**")
+        st.markdown("**Select Years:**")
         selected_years = st.multiselect(
             "Choose years for analysis:",
             years,
-            default=[2024] if 2024 in years else [years[0]] if years else [],
+            default=years if years else [],
             help="Select one or more years for analysis"
         )
 
@@ -697,16 +748,16 @@ def main():
         # Month multi-select
         months = sorted(df_filtered[month_col].unique().tolist()
                         ) if month_col in df_filtered.columns else list(range(7, 13))
-        st.markdown("**📆 Select Months:**")
+        st.markdown("**Select Months:**")
         selected_months = st.multiselect(
             "Choose months for analysis:",
             months,
-            default=[7] if 7 in months else [months[0]] if months else [],
+            default=months if months else [],
             help="Select one or more months for analysis"
         )
 
     # Section: Data Display
-    st.markdown('<div class="section-header">📊 Uploaded Data with Optimizable Features</div>',
+    st.markdown('<div class="section-header">Uploaded Data with Optimizable Features</div>',
                 unsafe_allow_html=True)
 
     # Toggle for percentage view
@@ -755,19 +806,16 @@ def main():
     optimizable_features = get_optimizable_features()
 
     # Build display columns using flexible column names
+    # Keep only ID columns defined in utils plus optimizable features
     base_columns = []
-    if brand_col in filtered_df.columns:
-        base_columns.append(brand_col)
-    if year_col in filtered_df.columns:
-        base_columns.append(year_col)
-    if month_col in filtered_df.columns:
-        base_columns.append(month_col)
-    if 'Week' in filtered_df.columns:
-        base_columns.append('Week')
-    elif 'week' in filtered_df.columns:
-        base_columns.append('week')
-    if 'week_of_month' in filtered_df.columns:
-        base_columns.append('week_of_month')
+    for id_col in lst_id_columns:
+        # accept flexible case variants
+        if id_col in filtered_df.columns:
+            base_columns.append(id_col)
+        elif id_col.capitalize() in filtered_df.columns:
+            base_columns.append(id_col.capitalize())
+        elif id_col.upper() in filtered_df.columns:
+            base_columns.append(id_col.upper())
 
     display_columns = base_columns + \
         [col for col in optimizable_features if col in filtered_df.columns]
@@ -806,12 +854,13 @@ def main():
     else:
         display_df = filtered_df[display_columns]
 
-    # Display editable table
+    # Display editable table (fixed height, scrollable)
     if not display_df.empty:
         edited_df = st.data_editor(
             display_df,
             use_container_width=True,
             num_rows="dynamic",
+            height=420,
             column_config={
                 col: st.column_config.NumberColumn(
                     col.replace('_', ' ').title(),
@@ -832,7 +881,7 @@ def main():
         st.warning("No data available for the selected filters.")
 
     # Calculate Button
-    st.markdown('<div class="section-header">🚀 Calculate</div>',
+    st.markdown('<div class="section-header">Run Analysis</div>',
                 unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -845,7 +894,7 @@ def main():
         )
 
     if calculate_button:
-        with st.spinner("🔄 Calculating brand power..."):
+        with st.spinner("Calculating brand power..."):
             # Detect changes in user data
             user_changes = {}
 
@@ -943,11 +992,11 @@ def main():
 
             st.session_state.calculation_done = True
 
-        st.success("✅ Calculation completed successfully!")
+        st.success("Calculation completed successfully!")
 
     # Display marketing channel changes (persistent across reruns)
     if st.session_state.column_changes:
-        st.markdown("### 📊 Marketing Channel Changes")
+        st.markdown("### Marketing Channel Changes")
         st.markdown("**Percentage change in total spend by channel:**")
 
         # Create a DataFrame for better display
@@ -961,22 +1010,23 @@ def main():
             })
 
         changes_df = pd.DataFrame(change_data)
-        st.dataframe(changes_df, use_container_width=True)
+        st.dataframe(changes_df, use_container_width=True, height=240)
     elif st.session_state.calculation_done:
-        st.info("ℹ️ No significant changes detected in marketing channels.")
+        st.info("No significant changes detected in marketing channels.")
 
     # Show results if calculation is done
     if st.session_state.calculation_done and st.session_state.baseline_data and st.session_state.simulated_data:
 
         # Section: Quarterly Brand Power Table
         st.markdown(
-            '<div class="section-header">📊 Quarterly Brand Power Results</div>', unsafe_allow_html=True)
+            '<div class="section-header">Quarterly Brand Power Results</div>', unsafe_allow_html=True)
 
         quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
 
         # Create results dataframe
         results_data = []
-        for brand in brands:
+        brands_to_include = selected_brands if selected_brands else brands
+        for brand in brands_to_include:
             if brand in st.session_state.baseline_data and brand in st.session_state.simulated_data:
                 row = {'Brand': brand}
                 for i, quarter in enumerate(quarters):
@@ -987,18 +1037,8 @@ def main():
                     change = ((simulated_val - baseline_val) /
                               baseline_val) * 100 if baseline_val != 0 else 0
 
-                    # Format with change indicator
-                    if abs(change) < 1:  # Less than 1% change
-                        status = "unchanged"
-                        indicator = "→"
-                    elif change > 0:
-                        status = "increase"
-                        indicator = "↗"
-                    else:
-                        status = "decrease"
-                        indicator = "↘"
-
-                    row[quarter] = f"{simulated_val:.2f} {indicator} ({change:+.1f}%)"
+                    # Format without icons
+                    row[quarter] = f"{simulated_val:.2f} (Δ {change:+.1f}%)"
 
                 results_data.append(row)
 
@@ -1009,6 +1049,7 @@ def main():
             st.dataframe(
                 results_df,
                 use_container_width=True,
+                height=320,
                 column_config={
                     quarter: st.column_config.TextColumn(
                         quarter,
@@ -1020,38 +1061,36 @@ def main():
             # Legend
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.markdown("🟢 **↗ Increase** vs baseline")
+                st.markdown("**Increase** vs baseline")
             with col2:
-                st.markdown("🔴 **↘ Decrease** vs baseline")
+                st.markdown("**Decrease** vs baseline")
             with col3:
-                st.markdown("⚪ **→ Unchanged** (< 1% change)")
+                st.markdown("**Unchanged** (< 1% change)")
 
         # Section: Charts
         st.markdown(
-            '<div class="section-header">📈 Baseline vs Simulated Comparison</div>', unsafe_allow_html=True)
+            '<div class="section-header">Baseline vs Simulated Comparison</div>', unsafe_allow_html=True)
 
         # Brand selection for chart
-        chart_options = ["All Brands"] + brands
-        chart_brand = st.selectbox(
-            "Select brand for detailed chart:",
-            chart_options,
-            help="Choose which brand(s) to display in the comparison chart"
+        selected_chart_brands = st.multiselect(
+            "Select brands for chart:",
+            brands,
+            default=selected_brands if selected_brands else brands,
+            help="Filter the comparison chart by brand"
         )
 
         # Create and display chart
-        selected_brand_for_chart = None if chart_brand == "All Brands" else chart_brand
-
         fig = create_comparison_chart(
             st.session_state.baseline_data,
             st.session_state.simulated_data,
             quarters,
-            selected_brand_for_chart
+            selected_chart_brands
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
         # Additional insights
-        with st.expander("🔍 Analysis Insights"):
+        with st.expander("Analysis Insights"):
             st.write("### Key Findings:")
 
             # Calculate overall trends
@@ -1080,64 +1119,16 @@ def main():
             - Color coding indicates performance relative to baseline forecasts
             """)
 
-    # Save Experiment Section
-    st.markdown('<div class="section-header">💾 Save Experiment</div>',
-                unsafe_allow_html=True)
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        # Generate default experiment name
-        existing_names = [exp['name']
-                          for exp in st.session_state.saved_experiments]
-        default_name = f"experiment_{len(st.session_state.saved_experiments) + 1}"
-        counter = 1
-        while default_name in existing_names:
-            counter += 1
-            default_name = f"experiment_{counter}"
-
-        experiment_name = st.text_input(
-            "Experiment Name:",
-            value=default_name,
-            help="Give your experiment a descriptive name"
-        )
-
-    with col2:
-        save_button = st.button(
-            "💾 Save Experiment",
-            type="secondary",
-            use_container_width=True,
-            help="Save current analysis state for later comparison"
-        )
-
-    if save_button:
-        if not experiment_name.strip():
-            st.error("⚠️ Please enter a name for the experiment.")
-        elif len(st.session_state.saved_experiments) >= 5:
-            st.error(
-                "⚠️ Maximum of 5 experiments allowed. Please delete an existing experiment first.")
-        elif not st.session_state.calculation_done:
-            st.warning("⚠️ Please run the calculation first before saving.")
-        else:
-            # Save the experiment
-            experiment = save_experiment(
-                experiment_name.strip(),
-                st.session_state.baseline_data,
-                st.session_state.simulated_data,
-                st.session_state.original_data,
-                st.session_state.column_changes
-            )
-            st.session_state.saved_experiments.append(experiment)
-            st.success(f"✅ Experiment '{experiment_name}' saved successfully!")
-            st.rerun()
+    # Save Scenario moved to sidebar (see sidebar section above)
 
     # Navigation
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🏠 Back to Home"):
+        if st.button("Back to Home"):
             st.switch_page("BrandCompass.py")
     with col2:
-        if st.button("🔄 Reset Analysis"):
+        if st.button("Reset Analysis"):
             st.session_state.calculation_done = False
             st.session_state.baseline_data = None
             st.session_state.simulated_data = None
