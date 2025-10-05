@@ -54,8 +54,7 @@ The application uses a professional white-blue-yellow color scheme:
 3. **Prepare baseline data** (optional):
    Place `baseline_forecast.csv` in `frontend/data/` directory
 
-## Running the Application
-
+   
 ### Development Mode
 
 ```bash
