@@ -23,7 +23,9 @@ from frontend.utils import (
     lst_id_columns,
     get_channel_groups,
     aggregate_by_channel_groups,
+    calculate_brand_power,
 )
+from frontend.scaled_forecast import build_brand_quarter_forecast
 
 app = Flask(__name__)
 
@@ -361,6 +363,12 @@ def calculate():
 
     try:
         df = pd.read_csv(filepath)
+        print("\n" + "-"*80)
+        print("REQUEST /calculate - INPUT SUMMARY")
+        print("-"*80)
+        print(f"Uploaded CSV path: {filepath}")
+        print(f"Original df shape: {df.shape}")
+        print(f"Original df columns: {list(df.columns)}")
 
         # Canonical column names
         brand_col = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
@@ -389,6 +397,11 @@ def calculate():
             df_filt = df_filt[df_filt[month_col].isin(sel_months)]
         if week_col and sel_weeks:
             df_filt = df_filt[df_filt[week_col].isin(sel_weeks)]
+        print(f"Filtered df_filt shape: {df_filt.shape}")
+        if brand_col in df_filt.columns:
+            print(f"Brands (filtered) count: {df_filt[brand_col].nunique()}")
+            print(
+                f"Sample brands: {sorted(df_filt[brand_col].dropna().unique().tolist())[:5]}")
 
         # Baseline per-brand power - get ALL brands from full dataset, not just filtered
         brands_all = sorted(df[brand_col].unique(
@@ -397,73 +410,171 @@ def calculate():
         baseline_data = get_baseline_data_for_brands(
             baseline_df, brands_all) if baseline_df is not None else None
 
-        # Compute user changes from edited rows vs original sums
-        optimizable = get_optimizable_columns()
+        # Apply user edits from grouped table back to detailed features, forecast quarterly power
         channel_groups_dict = get_channel_groups()
         edited_rows = data.get('edited_rows', [])
         edited_columns = data.get('columns', [])
-
-        user_changes = {}
-        if edited_rows and edited_columns:
+        print("\nEDITED DATA (FROM UI)")
+        print(f"edited_rows count: {len(edited_rows)}")
+        print(
+            f"edited_columns count: {len(edited_columns)} | columns: {edited_columns[:15]}")
+        if edited_rows:
             try:
-                edited_df = pd.DataFrame(edited_rows, columns=edited_columns)
-                # Apply same filters to edited data if those id columns exist
-                if brand_col and brand_col in edited_df.columns and sel_brands:
-                    edited_df = edited_df[edited_df[brand_col].isin(
-                        sel_brands)]
-                if year_col and year_col in edited_df.columns and sel_years:
-                    edited_df = edited_df[edited_df[year_col].isin(sel_years)]
-                if month_col and month_col in edited_df.columns and sel_months:
-                    edited_df = edited_df[edited_df[month_col].isin(
-                        sel_months)]
-                if week_col and week_col in edited_df.columns and sel_weeks:
-                    edited_df = edited_df[edited_df[week_col].isin(sel_weeks)]
+                print(
+                    f"edited_rows[0] keys: {list(edited_rows[0].keys()) if isinstance(edited_rows[0], dict) else 'row is list'}")
+            except Exception:
+                pass
 
-                # Aggregate original data by channel groups for comparison
-                df_filt_aggregated = aggregate_by_channel_groups(df_filt)
+        def apply_grouped_edits(df_source: pd.DataFrame, edited_rows_list, edited_cols_list):
+            """Apply grouped edits back to component features proportionally."""
+            if not edited_rows_list or not edited_cols_list:
+                return df_source
 
-                # Check if we're working with grouped or individual columns
-                grouped_cols = list(channel_groups_dict.keys())
-                is_grouped = any(
-                    col in edited_df.columns for col in grouped_cols)
+            edited_df_local = pd.DataFrame(
+                edited_rows_list, columns=edited_cols_list)
 
-                if is_grouped:
-                    # Working with grouped data - compare grouped sums
-                    for group_name in grouped_cols:
-                        if group_name in edited_df.columns and group_name in df_filt_aggregated.columns:
-                            orig_sum = float(
-                                df_filt_aggregated[group_name].sum())
-                            new_sum = float(edited_df[group_name].sum())
-                            if orig_sum != 0:
-                                # Store changes at group level - will be applied to all components
-                                pct_change = (
-                                    (new_sum - orig_sum) / orig_sum) * 100.0
-                                user_changes[group_name] = pct_change
-                                # Also apply same change to all individual features in this group
-                                for feat in channel_groups_dict[group_name]:
-                                    if feat in df_filt.columns:
-                                        user_changes[feat] = pct_change
-                            else:
-                                user_changes[group_name] = 0.0
+            # Build join keys present in both frames
+            join_keys = []
+            for c in ['country', 'Country']:
+                if c in df_source.columns and c in edited_df_local.columns:
+                    join_keys.append(c)
+                    break
+            for c in [brand_col] if brand_col else []:
+                if c in df_source.columns and c in edited_df_local.columns:
+                    join_keys.append(c)
+            for c in [year_col, month_col, week_col]:
+                if c and c in df_source.columns and c in edited_df_local.columns:
+                    join_keys.append(c)
+
+            df_updated = df_source.copy()
+
+            # Ensure numeric types for group columns
+            for g in channel_groups_dict.keys():
+                if g in edited_df_local.columns:
+                    edited_df_local[g] = pd.to_numeric(
+                        edited_df_local[g], errors='coerce').fillna(0.0)
+
+            # Resolve feature names robustly (spaces vs underscores, case)
+            df_cols_lower_map = {c.lower(): c for c in df_updated.columns}
+
+            def resolve_feature_column(name: str):
+                candidates = [name, name.replace(
+                    '_', ' '), name.replace(' ', '_')]
+                for cand in candidates:
+                    real = df_cols_lower_map.get(cand.lower())
+                    if real is not None:
+                        return real
+                return None
+
+            for group_name, features in channel_groups_dict.items():
+                if group_name not in edited_df_local.columns:
+                    continue
+
+                target_col = f"{group_name}__target"
+                if join_keys:
+                    df_updated = df_updated.merge(
+                        edited_df_local[join_keys + [group_name]
+                                        ].rename(columns={group_name: target_col}),
+                        on=join_keys,
+                        how='left'
+                    )
+                    try:
+                        matched_count = int(
+                            df_updated[target_col].notna().sum())
+                        print(
+                            f"Merged group '{group_name}' on keys {join_keys} | matched rows: {matched_count}")
+                    except Exception as _:
+                        pass
                 else:
-                    # Working with individual features
-                    for feat in optimizable:
-                        if feat in df_filt.columns and feat in edited_df.columns:
-                            orig_sum = float(df_filt[feat].sum())
-                            new_sum = float(edited_df[feat].sum())
-                            if orig_sum != 0:
-                                user_changes[feat] = (
-                                    (new_sum - orig_sum) / orig_sum) * 100.0
-                            else:
-                                user_changes[feat] = 0.0
-            except Exception as e:
-                print(f"Error processing edited rows: {e}")
-                user_changes = {}
-        else:
-            user_changes = data.get('changes', {}) or {}
+                    total_target = float(edited_df_local[group_name].sum())
+                    df_updated[target_col] = total_target
 
-        simulated_data = simulate_outcomes_from_changes(
-            baseline_data, user_changes) if baseline_data else None
+                present_features = []
+                for f in features:
+                    real_col = resolve_feature_column(f)
+                    if real_col and real_col not in present_features:
+                        present_features.append(real_col)
+                if not present_features:
+                    if target_col in df_updated.columns:
+                        df_updated.drop(columns=[target_col], inplace=True)
+                    continue
+
+                orig_sum = df_updated[present_features].fillna(0).sum(axis=1)
+                target_series = df_updated[target_col].fillna(np.nan)
+
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    scale_factor = target_series / \
+                        orig_sum.replace({0: np.nan})
+
+                for feat in present_features:
+                    df_updated[feat] = np.where(
+                        (~target_series.isna()) & (orig_sum > 0),
+                        df_updated[feat] * scale_factor,
+                        df_updated[feat]
+                    )
+
+                needs_distribution = (~target_series.isna()) & (orig_sum <= 0)
+                if needs_distribution.any():
+                    num_feats = len(present_features)
+                    equal_share = np.where(
+                        needs_distribution, target_series / max(num_feats, 1), 0.0)
+                    for feat in present_features:
+                        df_updated[feat] = np.where(
+                            needs_distribution, equal_share, df_updated[feat])
+
+                if target_col in df_updated.columns:
+                    df_updated.drop(columns=[target_col], inplace=True)
+
+            return df_updated
+
+        # Apply edits to the FULL ORIGINAL dataset (all historical + future data)
+        # This ensures the model has complete training history
+        df_full_original = pd.read_csv(filepath)
+        df_edited_applied = apply_grouped_edits(
+            df_full_original, edited_rows, edited_columns)
+        print("\nPOST-EDIT MERGE SUMMARY")
+        print(f"df_edited_applied shape: {df_edited_applied.shape}")
+        # Compare group sums before/after for sanity
+        try:
+            df_groups_before = aggregate_by_channel_groups(df)
+            df_groups_after = aggregate_by_channel_groups(df_edited_applied)
+            group_cols = list(get_channel_groups().keys())
+            print("Group sums BEFORE edits:")
+            print({g: float(df_groups_before[g].sum())
+                  for g in group_cols if g in df_groups_before.columns})
+            print("Group sums AFTER edits:")
+            print({g: float(df_groups_after[g].sum())
+                  for g in group_cols if g in df_groups_after.columns})
+        except Exception as e:
+            print(f"Group sum comparison failed: {e}")
+
+        # Run power forecast on updated data, then roll up to quarters
+        forecast_input_df = df_edited_applied.copy()
+        print(
+            f"FORECAST INPUT ROWS (post-edit merge): {len(forecast_input_df)}")
+        print(f"Forecast input columns: {list(forecast_input_df.columns)}")
+        # Strictly use scaled AutoGluon forecast; no fallback
+        try:
+            forecast_quarters, simulated_data = build_brand_quarter_forecast(
+                forecast_input_df)
+        except Exception as forecast_error:
+            print(f"FORECAST ERROR: {forecast_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Forecast failed: {str(forecast_error)}'}), 500
+
+        # Print summary counts for forecast
+        expected_rows = len(simulated_data) * len(forecast_quarters)
+        actual_rows = sum(len(v) for v in simulated_data.values())
+        print(
+            f"FORECAST SUMMARY: brands={len(brands_all)}, quarters={len(forecast_quarters)}")
+        print(f"FORECAST ROWS EXPECTED: {expected_rows}")
+        print(f"FORECAST ROWS ACTUAL: {actual_rows}")
+        # Show one sample brand output
+        if simulated_data:
+            sample_brand = next(iter(simulated_data.keys()))
+            print(
+                f"Sample brand: {sample_brand} -> {simulated_data[sample_brand]}")
 
         # Calculate historical data (rolled up quarterly) from uploaded file
         historical_data = {}
@@ -703,7 +814,7 @@ def calculate():
             f"   - Historical quarters == Forecast quarters? {results['historical_quarters'] == results['quarters']}")
         if results['historical_quarters'] == results['quarters']:
             print(
-                f"   ⚠ WARNING: No pre-intervention historical data! Both cover same period.")
+                f"   WARNING: No pre-intervention historical data! Both cover same period.")
         else:
             print(
                 f"   ✓ Good: Historical data is from different time period than forecast")

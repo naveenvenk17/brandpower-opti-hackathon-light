@@ -756,7 +756,14 @@
                 columns: tableColumns
             })
         })
-            .then(response => response.json())
+            .then(async (response) => {
+                const data = await response.json();
+                if (!response.ok || (data && data.error)) {
+                    const msg = (data && data.error) ? data.error : 'Server error';
+                    throw new Error(msg);
+                }
+                return data;
+            })
             .then(data => {
                 baselineData = data.baseline;
                 simulatedData = data.simulated;
@@ -767,7 +774,7 @@
             .catch(error => {
                 document.getElementById('resultsTable').innerHTML = `
             <div class="alert alert-danger">
-                <strong>✗ Error:</strong> ${error.message}
+                <strong>Error:</strong> ${error.message}
             </div>
         `;
             });
@@ -779,6 +786,15 @@
         const simulated = data.simulated;
         const historical = data.historical || {};
         const historicalQuarters = data.historical_quarters || [];
+
+        if (!Array.isArray(quarters) || !baseline || typeof baseline !== 'object' || !simulated || typeof simulated !== 'object') {
+            document.getElementById('resultsTable').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> Invalid response from server.
+                </div>
+            `;
+            return;
+        }
 
         console.log('=== DISPLAY RESULTS ===');
         console.log('Historical data received:', historical);
@@ -1360,7 +1376,14 @@
                 columns: tableColumns
             })
         })
-            .then(response => response.json())
+            .then(async (response) => {
+                const data = await response.json();
+                if (!response.ok || (data && data.error)) {
+                    const msg = (data && data.error) ? data.error : 'Server error';
+                    throw new Error(msg);
+                }
+                return data;
+            })
             .then(data => {
                 baselineData = data.baseline;
                 simulatedData = data.simulated;
@@ -1368,6 +1391,11 @@
             })
             .catch(error => {
                 console.error('Error loading baseline:', error);
+                document.getElementById('resultsTable').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
             });
     }
 
@@ -1377,6 +1405,15 @@
         const baseline = data.baseline;
         const historical = data.historical || {};
         const historicalQuarters = data.historical_quarters || [];
+
+        if (!Array.isArray(quarters) || !baseline || typeof baseline !== 'object') {
+            document.getElementById('resultsTable').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> Invalid response from server.
+                </div>
+            `;
+            return;
+        }
 
         console.log('=== DISPLAY BASELINE RESULTS ===');
         console.log('Historical data received:', historical);
