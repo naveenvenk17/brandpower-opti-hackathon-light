@@ -203,9 +203,8 @@
                                     <input type="text" placeholder="Search brands..." data-search="brand">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
-                                    {% set default_brand = 'AGUILA' %}
                                     {% for brand in brands %}
-                                    <div class="multi-select-option {% if brand|upper == default_brand %}selected{% endif %}"
+                                    <div class="multi-select-option"
                                         data-value="{{ brand }}" data-filter-type="brand" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ brand }}</span>
@@ -228,7 +227,7 @@
                                 </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% for year in years %}
-                                    <div class="multi-select-option {% if year == 2024 %}selected{% endif %}"
+                                    <div class="multi-select-option"
                                         data-value="{{ year }}" data-filter-type="year" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ year }}</span>
@@ -251,7 +250,7 @@
                                 </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% for month in months %}
-                                    <div class="multi-select-option {% if month == 7 %}selected{% endif %}"
+                                    <div class="multi-select-option"
                                         data-value="{{ month }}" data-filter-type="month" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>Month {{ month }}</span>
@@ -516,23 +515,44 @@
         });
         tableHTML += '</tr></thead><tbody>';
 
-        // Show ALL brands, not just filtered ones
-        const allBrands = Object.keys(baseline);
+        // Filter out brands that do not have prediction data
+        const allBrands = Object.keys(baseline).filter(brand => {
+            return baseline[brand] && baseline[brand].length > 0 && simulated[brand] && simulated[brand].length > 0;
+        });
 
         allBrands.forEach(brand => {
             tableHTML += `<tr><td><strong>${brand}</strong></td>`;
 
-            baseline[brand].forEach((baseValue, i) => {
-                const simValue = simulated[brand][i];
-                const change = ((simValue - baseValue) / baseValue) * 100;
-                const color = change >= 0 ? '#10b981' : '#ef4444';
-                tableHTML += `<td style="text-align: left;">
-                    <span style="font-weight: 600;">${simValue.toFixed(2)}</span>
-                    <span style="font-size: 0.75rem; color: ${color}; margin-left: 0.5rem;">
-                        ${change > 0 ? '+' : ''}${change.toFixed(1)}%
-                    </span>
-                </td>`;
-            });
+            if (baseline[brand] && baseline[brand].length > 0 && simulated[brand] && simulated[brand].length > 0) {
+                baseline[brand].forEach((baseValue, i) => {
+                    const simValue = simulated[brand][i];
+                    let changeText = '';
+                    let changeValue = 0;
+                    if (baseValue === 0) {
+                        if (simValue > 0) {
+                            changeText = 'New';
+                            changeValue = Infinity;
+                        } else {
+                            changeText = 'N/A';
+                            changeValue = 0;
+                        }
+                    } else {
+                        changeValue = ((simValue - baseValue) / baseValue) * 100;
+                        changeText = `${changeValue > 0 ? '+' : ''}${changeValue.toFixed(1)}%`;
+                    }
+                    const color = changeValue >= 0 ? '#10b981' : '#ef4444';
+                    tableHTML += `<td style="text-align: left;">
+                        <span style="font-weight: 600;">${simValue.toFixed(2)}</span>
+                        <span style="font-size: 0.75rem; color: ${color}; margin-left: 0.5rem;">
+                            ${changeText}
+                        </span>
+                    </td>`;
+                });
+            } else {
+                quarters.forEach(() => {
+                    tableHTML += `<td style="text-align: center;">N/A</td>`;
+                });
+            }
 
             tableHTML += '</tr>';
         });
@@ -812,62 +832,6 @@
             });
     }
 
-    // Load baseline forecast on page load
-    function loadBaselineForecast() {
-        fetch('{{ url_for("calculate") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                changes: {},
-                filters: { brands: [], years: [], months: [] },
-                edited_rows: tableRows,
-                columns: tableColumns
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                baselineData = data.baseline;
-                simulatedData = data.simulated;
-                displayBaselineResults(data);
-            })
-            .catch(error => {
-                console.error('Error loading baseline:', error);
-            });
-    }
-
-    // Display baseline results (no changes)
-    function displayBaselineResults(data) {
-        const quarters = data.quarters;
-        const baseline = data.baseline;
-
-        let tableHTML = '<div class="table-container"><table class="table table-striped"><thead><tr>';
-        tableHTML += '<th>Brand</th>';
-        quarters.forEach(q => {
-            tableHTML += `<th>${q}</th>`;
-        });
-        tableHTML += '</tr></thead><tbody>';
-
-        const allBrands = Object.keys(baseline);
-
-        allBrands.forEach(brand => {
-            tableHTML += `<tr><td><strong>${brand}</strong></td>`;
-
-            baseline[brand].forEach((baseValue) => {
-                tableHTML += `<td>${baseValue.toFixed(2)}</td>`;
-            });
-
-            tableHTML += '</tr>';
-        });
-
-        tableHTML += '</tbody></table></div>';
-        document.getElementById('resultsTable').innerHTML = tableHTML;
-        document.getElementById('resultsSection').style.display = 'block';
-
-        populateBrandFilter(Object.keys(baseline));
-        createChart(baseline, baseline, quarters);
-    }
 
     // Update sidebar scenarios list
     function updateSidebarScenarios() {
@@ -978,7 +942,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         renderEditableTable();
-        loadBaselineForecast();
         updateSidebarScenarios();
     });
 </script>

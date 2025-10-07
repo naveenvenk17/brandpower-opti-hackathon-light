@@ -1,0 +1,21 @@
+5. Top 20 Most Important Features:                                                                           │
+ │    INFO:__main__:   power_lag_1                                             53558                               │
+ │    INFO:__main__:   brand_rank_normalized                                   14481                               │
+ │    INFO:__main__:   power_lag_2                                             12467                               │
+ │    INFO:__main__:   relative_to_leader                                      11730                               │
+ │    INFO:__main__:   competitive_pressure                                     8068                               │
+ │    INFO:__main__:   power_lag_3                                              6602                               │
+ │    INFO:__main__:   country_mean_power                                       1869                               │
+ │    INFO:__main__:   country_max_power                                        1353                               │
+ │    INFO:__main__:   brand_seasonal_strength                                   951                               │
+ │    INFO:__main__:   gap_to_leader                                             531                               │
+ │    INFO:__main__:   seasonal_deviation                                        410                               │
+ │    INFO:__main__:   momentum_consistency                                      376                               │
+ │    INFO:__main__:   volatility_ratio                                          313                               │
+ │    INFO:__main__:   historical_marketing_roi                                  237                               │
+ │    INFO:__main__:   power_lag_4q                                              237                               │
+ │    INFO:__main__:   competitor_total_spend                                    189                               │
+ │    INFO:__main__:   other_spend                                               180                               │
+ │    INFO:__main__:   power_volatility_expanding                                150                               │
+ │    INFO:__main__:   tv_spend                                                  119                               │
+ │    INFO:__main__:   brand_trend_strength                                      117 

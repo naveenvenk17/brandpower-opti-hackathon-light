@@ -3,11 +3,16 @@ import numpy as np
 import os
 
 
-lst_optimize_allowed_features = ["brand events", "brand promotion", "digitaldisplayandsearch", "digitalvideo", "influencer",
+# Updated to match the simplified marketing spend columns from backend
+lst_optimize_allowed_features = ["digital_spend", "tv_spend", "traditional_spend", "sponsorship_spend", "other_spend"]
+
+# Keep original features list for backward compatibility (if needed)
+lst_optimize_allowed_features_legacy = ["brand events", "brand promotion", "digitaldisplayandsearch", "digitalvideo", "influencer",
                                  "meta", "ooh", "opentv", "others", "paytv", "radio", "sponsorship", "streamingaudio", "tiktok", "twitter", "youtube",]
+
 lst_fixed_featured = ["avg_prcp", "consumer price index, core", "consumer_price_inflation", "cpi_adjusted_personal_income", "discount", "discounted_price_ratio", "domestic demand % of gdp", "gdp per capita, lcu", "inflation, cpi, aop", "personal disposable income, lcu",
                       "population, growth", "population, total", "population, working age", "Private consumption including NPISHs, real, LCU", "real fx index", "real_disposable_income", "retail sales, value index", "retail sales, volume index", "unemployment rate", "week_of_month"]
-lst_id_columns = ["country", "brand", "year", "month", "week_of_month"]
+lst_id_columns = ["country", "brand", "year", "month", "week_of_month", "quarter"]
 lst_target_columns = ["power"]
 
 
