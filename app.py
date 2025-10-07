@@ -6,11 +6,7 @@ A comprehensive brand power simulation platform
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import json
+
 import io
 import os
 from datetime import datetime
@@ -21,6 +17,10 @@ from frontend.utils import (
     get_brands_from_data,
     lst_id_columns,
 )
+import requests
+import logging
+
+from typing import Optional
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -32,127 +32,98 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 
 ALLOWED_EXTENSIONS = {'csv'}
 
+# FastAPI backend configuration (POC local)
+FASTAPI_BASE_URL = os.environ.get('FASTAPI_BASE_URL', 'http://127.0.0.1:8010')
+
+# Load available countries and brands from training data
+def load_available_data():
+    """Load available countries and brands from training data"""
+    try:
+        import pandas as pd
+        df = pd.read_csv('data/brand_power_with_marketing_features.csv')
+        countries = sorted(df['country'].unique().tolist())
+        brands_by_country = {}
+        for country in countries:
+            brands_by_country[country] = sorted(df[df['country'] == country]['brand'].unique().tolist())
+        return countries, brands_by_country
+    except Exception as e:
+        logging.error(f"Failed to load data: {e}")
+        return ['brazil', 'colombia', 'us'], {'brazil': ['amstel'], 'colombia': ['aguila'], 'us': ['bud light']}
+
+AVAILABLE_COUNTRIES, BRANDS_BY_COUNTRY = load_available_data()
+
+def get_country_and_brand(brand_name: str, selected_country: str = None):
+    """
+    Get country and brand for API calls
+    Returns: (country, brand) tuple with actual names from data
+    """
+    # If country is specified in session, use it
+    if selected_country and selected_country in AVAILABLE_COUNTRIES:
+        country = selected_country
+        # Find brand in this country
+        if brand_name in BRANDS_BY_COUNTRY.get(country, []):
+            return country, brand_name
+        # Brand not in this country, use first available brand
+        brands = BRANDS_BY_COUNTRY.get(country, [])
+        return country, brands[0] if brands else 'aguila'
+
+    # Search for brand across all countries
+    for country, brands in BRANDS_BY_COUNTRY.items():
+        if brand_name in brands:
+            return country, brand_name
+
+    # Default fallback: colombia/aguila
+    return 'colombia', 'aguila'
+
+
+def fastapi_get(path: str, params: Optional[dict] = None):
+    url = f"{FASTAPI_BASE_URL}{path}"
+    app.logger.info(f"FastAPI GET {url} params={params}")
+    resp = requests.get(url, params=params, timeout=30)
+    try:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as http_err:
+        app.logger.error(f"FastAPI GET error {resp.status_code}: {resp.text}")
+        raise
+    return resp.json()
+
+
+def fastapi_post(path: str, payload: dict):
+    url = f"{FASTAPI_BASE_URL}{path}"
+    app.logger.info(f"FastAPI POST {url} body_keys={list(payload.keys())}")
+    resp = requests.post(url, json=payload, timeout=60)
+    try:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as http_err:
+        app.logger.error(f"FastAPI POST error {resp.status_code}: {resp.text}")
+        raise
+    return resp.json()
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def create_template_csv():
-    """Create a template CSV for download"""
+    """Create a template CSV for download with simplified marketing channels"""
+    # Use actual data structure that matches backend expectations
     template_data = {
-        'Brand': ['BrandA', 'BrandA', 'BrandB', 'BrandB', 'BrandC', 'BrandC'],
-        'Year': [2024, 2024, 2024, 2024, 2024, 2024],
-        'Month': [7, 8, 7, 8, 7, 8],
-        'Week': [1, 1, 1, 1, 1, 1],
-        'brand_events': [100, 110, 80, 90, 120, 130],
-        'brand_promotion': [200, 210, 180, 190, 220, 230],
-        'digitaldisplayandsearch': [150, 160, 140, 150, 170, 180],
-        'digitalvideo': [300, 310, 280, 290, 320, 330],
-        'influencer': [50, 55, 45, 50, 60, 65],
-        'meta': [400, 410, 380, 390, 420, 430],
-        'ooh': [75, 80, 70, 75, 85, 90],
-        'opentv': [500, 510, 480, 490, 520, 530],
-        'others': [25, 30, 20, 25, 35, 40],
-        'paytv': [200, 210, 180, 190, 220, 230],
-        'radio': [100, 110, 90, 100, 120, 130],
-        'sponsorship': [150, 160, 140, 150, 170, 180],
-        'streamingaudio': [80, 85, 75, 80, 90, 95],
-        'tiktok': [120, 125, 110, 115, 130, 135],
-        'twitter': [90, 95, 85, 90, 100, 105],
-        'youtube': [250, 260, 240, 250, 270, 280]
+        'country': ['colombia', 'colombia', 'colombia', 'colombia', 'colombia', 'colombia'],
+        'brand': ['aguila', 'aguila', 'aguila light', 'aguila light', 'costena bacana', 'costena bacana'],
+        'year': [2024, 2024, 2024, 2024, 2024, 2024],
+        'quarter': ['Q3', 'Q4', 'Q3', 'Q4', 'Q3', 'Q4'],
+        'month': [7, 10, 7, 10, 7, 10],
+        'week_of_month': [1, 1, 1, 1, 1, 1],
+        # Simplified marketing channels (matches backend)
+        'digital_spend': [500000, 520000, 400000, 420000, 300000, 310000],
+        'tv_spend': [1000000, 1050000, 800000, 840000, 600000, 630000],
+        'traditional_spend': [300000, 315000, 250000, 260000, 200000, 210000],
+        'sponsorship_spend': [400000, 420000, 350000, 370000, 250000, 260000],
+        'other_spend': [200000, 210000, 150000, 160000, 100000, 110000]
     }
     return pd.DataFrame(template_data)
 
 
-def load_baseline_forecast():
-    """Load baseline forecast data from CSV file"""
-    baseline_path = os.path.join("frontend", "data", "baseline_forecast.csv")
-    alternative_paths = [
-        os.path.join("data", "baseline_forecast.csv"),
-        "frontend/data/baseline_forecast.csv"
-    ]
-
-    try:
-        if os.path.exists(baseline_path):
-            return pd.read_csv(baseline_path)
-    except Exception:
-        pass
-
-    for alt_path in alternative_paths:
-        try:
-            if os.path.exists(alt_path):
-                return pd.read_csv(alt_path)
-        except Exception:
-            continue
-
-    return None
-
-
-def get_baseline_data_for_brands(baseline_df, brands):
-    """Extract baseline data for specific brands and quarters"""
-    if baseline_df is None or baseline_df.empty:
-        return None
-
-    baseline_data = {}
-    quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
-
-    for brand in brands:
-        brand_values = []
-        for quarter in quarters:
-            if quarter == '2024 Q3':
-                csv_year, csv_period = 2024, 'Q3'
-            elif quarter == '2024 Q4':
-                csv_year, csv_period = 2024, 'Q4'
-            elif quarter == '2025 Q1':
-                csv_year, csv_period = 2025, 'Q1'
-            elif quarter == '2025 Q2':
-                csv_year, csv_period = 2025, 'Q2'
-            else:
-                csv_year, csv_period = 2024, 'Q3'
-
-            matching_rows = baseline_df[
-                (baseline_df['year'] == csv_year) &
-                (baseline_df['period'] == csv_period) &
-                (baseline_df['brand'].str.lower() == brand.lower())
-            ]
-
-            if not matching_rows.empty:
-                brand_values.append(matching_rows['power'].iloc[0])
-            else:
-                quarter_avg = baseline_df[
-                    (baseline_df['year'] == csv_year) &
-                    (baseline_df['period'] == csv_period)
-                ]['power'].mean()
-                brand_values.append(
-                    quarter_avg if pd.notna(quarter_avg) else 15.0)
-
-        baseline_data[brand] = brand_values
-
-    return baseline_data
-
-
-def simulate_outcomes_from_changes(baseline_data, user_changes=None):
-    """Simulate outcomes based on user changes to marketing spend"""
-    if user_changes is None:
-        return baseline_data.copy()
-
-    simulated_data = {}
-    for brand, baseline_values in baseline_data.items():
-        simulated_values = []
-        for value in baseline_values:
-            impact_factor = 1.0
-            if user_changes:
-                total_change = sum(user_changes.values())
-                change_count = len(
-                    [c for c in user_changes.values() if c != 0])
-                if change_count > 0:
-                    avg_change = total_change / change_count
-                    impact_factor = 1 + (avg_change * 0.001)
-            simulated_value = value * impact_factor
-            simulated_values.append(max(0, simulated_value))
-        simulated_data[brand] = simulated_values
-
-    return simulated_data
 
 
 @app.route('/')
@@ -250,13 +221,6 @@ def analysis():
         months = sorted(df[month_col].unique().tolist()
                         ) if month_col in df.columns else []
 
-        baseline_df = load_baseline_forecast()
-        baseline_data = None
-        if baseline_df is not None and brands:
-            baseline_data = get_baseline_data_for_brands(baseline_df, brands)
-
-        session['baseline_data'] = baseline_data
-
         # Build editable table data: only ID columns and optimizable features present
         optimizable_features = get_optimizable_columns()
 
@@ -302,174 +266,200 @@ def analysis():
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
-    """Calculate brand power"""
+    """
+    Calculate brand power by sending the user's edited data to the backend for simulation.
+    """
     data = request.get_json()
+    if not data or 'edited_rows' not in data or 'columns' not in data:
+        return jsonify({'error': 'Invalid request payload. Must include edited_rows and columns.'}), 400
 
     if 'uploaded_file' not in session:
-        return jsonify({'error': 'No data uploaded'}), 400
+        return jsonify({'error': 'No data uploaded. Please upload a file first.'}), 400
 
     filename = session['uploaded_file']
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
     try:
-        df = pd.read_csv(filepath)
-
-        # Canonical column names
-        brand_col = 'Brand' if 'Brand' in df.columns else 'brand' if 'brand' in df.columns else None
-        year_col = 'Year' if 'Year' in df.columns else 'year' if 'year' in df.columns else None
-        month_col = 'Month' if 'Month' in df.columns else 'month' if 'month' in df.columns else None
-
-        # Apply standard date filter
-        if year_col in df.columns and month_col in df.columns:
-            df = df[(df[year_col] > 2024) | (
-                (df[year_col] == 2024) & (df[month_col] >= 7))].copy()
-
-        # Filters from client
+        # Determine which brands to process based on frontend filters
         filters = data.get('filters', {})
         sel_brands = filters.get('brands', [])
-        sel_years = filters.get('years', [])
-        sel_months = filters.get('months', [])
-
-        df_filt = df.copy()
-        if brand_col and sel_brands:
-            df_filt = df_filt[df_filt[brand_col].isin(sel_brands)]
-        if year_col and sel_years:
-            df_filt = df_filt[df_filt[year_col].isin(sel_years)]
-        if month_col and sel_months:
-            df_filt = df_filt[df_filt[month_col].isin(sel_months)]
-
-        # Baseline per-brand power - get ALL brands from full dataset, not just filtered
-        brands_all = sorted(df[brand_col].unique(
-        ).tolist()) if brand_col in df.columns else []
-        baseline_df = load_baseline_forecast()
-        baseline_data = get_baseline_data_for_brands(
-            baseline_df, brands_all) if baseline_df is not None else None
-
-        # Compute user changes from edited rows vs original sums
-        optimizable = get_optimizable_columns()
-        edited_rows = data.get('edited_rows', [])
-        edited_columns = data.get('columns', [])
-
-        user_changes = {}
-        if edited_rows and edited_columns:
-            try:
-                edited_df = pd.DataFrame(edited_rows, columns=edited_columns)
-                # Apply same filters to edited data if those id columns exist
-                if brand_col and brand_col in edited_df.columns and sel_brands:
-                    edited_df = edited_df[edited_df[brand_col].isin(
-                        sel_brands)]
-                if year_col and year_col in edited_df.columns and sel_years:
-                    edited_df = edited_df[edited_df[year_col].isin(sel_years)]
-                if month_col and month_col in edited_df.columns and sel_months:
-                    edited_df = edited_df[edited_df[month_col].isin(
-                        sel_months)]
-
-                for feat in optimizable:
-                    if feat in df_filt.columns and feat in edited_df.columns:
-                        orig_sum = float(df_filt[feat].sum())
-                        new_sum = float(edited_df[feat].sum())
-                        if orig_sum != 0:
-                            user_changes[feat] = (
-                                (new_sum - orig_sum) / orig_sum) * 100.0
-                        else:
-                            user_changes[feat] = 0.0
-            except Exception:
-                user_changes = {}
+        
+        if not sel_brands:
+            # If no brands are selected in the filter, use all brands present in the edited data
+            edited_df = pd.DataFrame(data['edited_rows'], columns=data['columns'])
+            brand_col = 'Brand' if 'Brand' in edited_df.columns else 'brand'
+            if brand_col in edited_df.columns:
+                target_brands = sorted(edited_df[brand_col].unique().tolist())
+            else:
+                # If no brand column, this will likely fail, but we send it anyway
+                target_brands = []
         else:
-            user_changes = data.get('changes', {}) or {}
+            target_brands = sel_brands
 
-        simulated_data = simulate_outcomes_from_changes(
-            baseline_data, user_changes) if baseline_data else None
-
-        quarters = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
-
-        results = {
-            'baseline': baseline_data,
-            'simulated': simulated_data,
-            'quarters': quarters
+        # Construct the payload for the new backend endpoint
+        payload = {
+            "edited_rows": data['edited_rows'],
+            "columns": data['columns'],
+            "target_brands": target_brands,
+            "max_horizon": 4
         }
 
-        return jsonify(results)
+        app.logger.info(f"Sending simulation request for brands: {target_brands}")
+
+        # Call the backend to get the simulation results
+        sim_resp = fastapi_post("/api/v1/simulate/scenario", payload)
+
+        # The backend now returns the data in the exact format the frontend UI expects.
+        # The response looks like: {'baseline': {'BrandA': [...]}, 'simulated': {'BrandA': [...]}, 'quarters': [...]}
+        return jsonify(sim_resp)
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        app.logger.error(f"An error occurred in /calculate: {e}")
+        # Pass the backend's error message to the frontend if possible
+        error_detail = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_detail = e.response.json().get('detail', str(e))
+            except:
+                pass
+        return jsonify({'error': error_detail}), 500
 
 
 @app.route('/save_experiment', methods=['POST'])
 def save_experiment():
     """Save experiment"""
     data = request.get_json()
+    name = data.get('name') or f"Experiment {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-    if 'experiments' not in session:
-        session['experiments'] = []
+    # Get country and brand from session or use defaults
+    selected_country = session.get('selected_country', 'colombia')
+    country, brand = get_country_and_brand('DEFAULT', selected_country)
 
-    experiment = {
-        'name': data.get('name'),
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'baseline_data': data.get('baseline_data'),
-        'simulated_data': data.get('simulated_data'),
-        'changes': data.get('changes')
-    }
+    baseline_data = data.get('baseline_data') or {}
+    simulated_data = data.get('simulated_data') or {}
 
-    session['experiments'].append(experiment)
-    session.modified = True
+    # Build scenarios from provided baseline/simulated maps
+    baseline_predictions = next(iter(baseline_data.values()), [15.0, 15.1, 15.2, 15.3])
+    marketing_predictions = next(iter(simulated_data.values()), baseline_predictions)
 
-    return jsonify({'success': True, 'experiment_count': len(session['experiments'])})
+    scenarios = [
+        {
+            'scenario_name': 'Baseline',
+            'allocation': {},
+            'results': {
+                'baseline_prediction': baseline_predictions,
+                'marketing_prediction': baseline_predictions,
+                'incremental_lift': [0, 0, 0, 0],
+                'total_spend': 0,
+                'roi': 0
+            }
+        },
+        {
+            'scenario_name': 'Simulated Changes',
+            'allocation': data.get('changes', {}) or {},
+            'results': {
+                'baseline_prediction': baseline_predictions,
+                'marketing_prediction': marketing_predictions,
+                'incremental_lift': [m - b for m, b in zip(marketing_predictions, baseline_predictions)],
+                'total_spend': sum(abs(v) for v in (data.get('changes', {}) or {}).values()),
+                'roi': 0
+            }
+        }
+    ]
+
+    try:
+        resp = fastapi_post('/api/v1/experiments', {
+            'name': name,
+            'description': data.get('description'),
+            'country': country,
+            'brand': brand,
+            'scenarios': scenarios
+        })
+        # Return count via listing
+        listing = fastapi_get('/api/v1/experiments')
+        count = len(listing.get('experiments', []))
+        return jsonify({'success': True, 'experiment_id': resp.get('id'), 'experiment_count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/experiments')
 def list_experiments():
     """List saved experiments"""
-    experiments = session.get('experiments', [])
-    return jsonify(experiments)
+    try:
+        listing = fastapi_get('/api/v1/experiments')
+        return jsonify(listing.get('experiments', []))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/delete_experiment/<int:index>', methods=['POST'])
 def delete_experiment(index: int):
     """Delete an experiment by index"""
-    experiments = session.get('experiments', [])
-    if 0 <= index < len(experiments):
-        experiments.pop(index)
-        session['experiments'] = experiments
-        session.modified = True
-        return jsonify({'success': True, 'experiment_count': len(experiments)})
-    return jsonify({'error': 'Invalid index'}), 400
+    try:
+        listing = fastapi_get('/api/v1/experiments')
+        experiments = listing.get('experiments', [])
+        if 0 <= index < len(experiments):
+            exp_id = experiments[index].get('id')
+            if not exp_id:
+                return jsonify({'error': 'Experiment id missing'}), 400
+            # delete
+            url = f"/api/v1/experiments/{exp_id}"
+            _ = requests.delete(f"{FASTAPI_BASE_URL}{url}", timeout=30)
+            # new count
+            listing2 = fastapi_get('/api/v1/experiments')
+            return jsonify({'success': True, 'experiment_count': len(listing2.get('experiments', []))})
+        return jsonify({'error': 'Invalid index'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/clear_experiments', methods=['POST'])
 def clear_experiments():
     """Clear all experiments"""
-    session['experiments'] = []
-    session.modified = True
-    return jsonify({'success': True})
+    try:
+        listing = fastapi_get('/api/v1/experiments')
+        for exp in listing.get('experiments', []):
+            exp_id = exp.get('id')
+            if exp_id:
+                _ = requests.delete(f"{FASTAPI_BASE_URL}/api/v1/experiments/{exp_id}", timeout=30)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @app.route('/export_experiments')
 def export_experiments():
     """Export all experiments to Excel"""
-    experiments = session.get('experiments', [])
+    try:
+        listing = fastapi_get('/api/v1/experiments')
+        experiments = listing.get('experiments', [])
+        if not experiments:
+            return jsonify({'error': 'No experiments to export'}), 400
 
-    if not experiments:
-        return jsonify({'error': 'No experiments to export'}), 400
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            for i, exp in enumerate(experiments):
+                df = pd.DataFrame({
+                    'Experiment': [exp.get('name')],
+                    'Created At': [exp.get('created_at')],
+                    'Updated At': [exp.get('updated_at')],
+                    'Country': [exp.get('country')],
+                    'Brand': [exp.get('brand')],
+                    'Scenario Count': [len(exp.get('scenarios', []))]
+                })
+                df.to_excel(writer, sheet_name=f"Experiment_{i+1}", index=False)
 
-    output = io.BytesIO()
-
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for i, exp in enumerate(experiments):
-            data = {
-                'Experiment': [exp['name']],
-                'Timestamp': [exp['timestamp']]
-            }
-            df = pd.DataFrame(data)
-            df.to_excel(writer, sheet_name=f"Experiment_{i+1}", index=False)
-
-    output.seek(0)
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=f'experiments_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    )
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'experiments_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

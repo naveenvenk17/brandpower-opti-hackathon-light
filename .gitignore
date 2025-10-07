@@ -5,6 +5,9 @@ env/
 ENV/
 .venv/
 .env/
+.claude/
+docs/
+old_scripts/
 
 # Python cache files
 __pycache__/
