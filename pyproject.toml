@@ -22,3 +22,7 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["frontend", "production_scripts"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+norecursedirs = ["old_scripts"]
