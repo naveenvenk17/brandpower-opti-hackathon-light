@@ -11,7 +11,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+<body data-selected-country="{{ session.get('selected_country') }}">
     <header class="header">
         <div class="container">
             <nav class="nav">
@@ -24,6 +24,8 @@
                     {% if session.get('uploaded_file') %}
                     <a href="{{ url_for('analysis') }}"
                         class="nav-link {% if request.endpoint == 'analysis' %}active{% endif %}">Analysis</a>
+                    <a href="{{ url_for('optimization') }}"
+                        class="nav-link {% if request.endpoint == 'optimization' %}active{% endif %}">Optimization</a>
                     {% endif %}
                 </div>
             </nav>
@@ -51,7 +53,26 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     {% block extra_scripts %}{% endblock %}
+
+    <div id="chat-icon" class="chat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+            <path fill-rule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.352 0 9.75-2.91 9.75-6.5s-4.398-6.5-9.75-6.5c-5.352 0-9.75 2.91-9.75 6.5 0 1.908.994 3.646 2.596 4.829-.244.84-.987 1.5-1.93 1.838A2.25 2.25 0 012.25 18.75a.75.75 0 01.75-.75Z" clip-rule="evenodd" />
+        </svg>
+    </div>
+
+    <div id="chat-widget" class="chat-widget">
+        <div class="chat-header">
+            <h2>Chat with BrandCompass.ai</h2>
+            <button id="close-chat" class="close-chat">&times;</button>
+        </div>
+        <div id="chat-body" class="chat-body"></div>
+        <div class="chat-footer">
+            <input type="text" id="chat-input" placeholder="Ask a question...">
+            <button id="send-chat">Send</button>
+        </div>
+    </div>
 </body>
 
 </html>

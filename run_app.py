@@ -17,6 +17,9 @@ from datetime import datetime
 from production_scripts.services.forecast_simulate_service import ForecastSimulateService
 from frontend.utils import get_optimizable_columns
 
+from production_scripts.agent.master_agent import get_agent_executor
+from langchain_core.messages import AIMessage, HumanMessage
+
 # Minimal POC FastAPI app with JSON persistence
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -57,6 +60,13 @@ class SimulateRequest(BaseModel):
     columns: List[str]
     target_brands: List[str]
     max_horizon: int = Field(4, ge=1, le=4)
+
+class OptimizeRequest(BaseModel):
+    total_budget: float = Field(..., gt=0)
+    channels: Optional[List[str]] = None
+    method: str = 'gradient'
+    digital_cap: float = Field(0.99, gt=0, le=1.0)
+    tv_cap: float = Field(0.5, gt=0, le=1.0)
 
 class CreateExperimentRequest(BaseModel):
     name: str
@@ -127,32 +137,10 @@ def simulate_scenario(req: SimulateRequest):
         if edited_df.empty:
             raise HTTPException(status_code=400, detail="edited_rows cannot be empty.")
 
-        # 2. Aggregate weekly data to quarterly spend
-        optimizable_cols = get_optimizable_columns()
-        quarterly_spend_df = edited_df.groupby(['country', 'brand', 'year', 'quarter'])[optimizable_cols].sum().reset_index()
+        # 2. Call the service's simulate method
+        simulation_result = service.simulate(edited_df, baseline_forecast)
 
-        # 3. Create a new simulated features dataframe by updating the baseline
-        simulated_features_df = service.baseline_features_df.copy()
-        
-        # Set index for efficient update
-        index_cols = ['country', 'brand', 'year', 'quarter']
-        simulated_features_df = simulated_features_df.set_index(index_cols)
-        quarterly_spend_df = quarterly_spend_df.set_index(index_cols)
-        
-        # Update the spend columns
-        simulated_features_df.update(quarterly_spend_df)
-        simulated_features_df.reset_index(inplace=True)
-
-        # 4. Re-engineer all marketing-dependent features
-        simulated_features_df['total_marketing_spend'] = simulated_features_df[optimizable_cols].sum(axis=1)
-        reengineered_df = service._reengineer_marketing_features(simulated_features_df)
-
-        # 5. Predict with the new simulated features
-        X_simulated = reengineered_df[service.feature_cols].fillna(0)
-        simulated_power_all = service.model.predict(X_simulated)
-        reengineered_df['simulated_power'] = simulated_power_all
-
-        # 6. Structure the response for the target brands
+        # 3. Structure the response for the target brands
         baseline_data = {}
         simulated_data = {}
         
@@ -167,8 +155,8 @@ def simulate_scenario(req: SimulateRequest):
             baseline_data[brand_name] = brand_baseline_df['predicted_power'].head(req.max_horizon).tolist()
 
             # Get simulated predictions
-            brand_simulated_df = reengineered_df[
-                (reengineered_df['country'] == brand_country) & (reengineered_df['brand'] == brand_name)
+            brand_simulated_df = simulation_result[
+                (simulation_result['country'] == brand_country) & (simulation_result['brand'] == brand_name)
             ].sort_values(['year', 'quarter'])
             simulated_data[brand_name] = brand_simulated_df['simulated_power'].head(req.max_horizon).tolist()
 
@@ -183,6 +171,26 @@ def simulate_scenario(req: SimulateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- Experiment Endpoints (Unchanged) ---
+@app.post("/api/v1/optimize/allocation")
+def optimize_allocation(req: OptimizeRequest):
+    """
+    Optimizes marketing allocation based on a total budget.
+    """
+    service, _ = get_service_and_baseline()
+    try:
+        logger.info(f"Optimization request for total budget: {req.total_budget}")
+        optimization_results = service.optimize_allocation(
+            total_budget=req.total_budget,
+            channels=req.channels,
+            method=req.method,
+            digital_cap=req.digital_cap,
+            tv_cap=req.tv_cap
+        )
+        return optimization_results
+    except Exception as e:
+        logger.exception(f"Optimization error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/v1/experiments")
 def create_experiment(req: CreateExperimentRequest):
     store = _load_json(EXPERIMENTS_JSON, {"experiments": []})
@@ -215,6 +223,32 @@ def delete_experiment_by_id(exp_id: str):
         raise HTTPException(status_code=404, detail="Experiment not found")
     _save_json(EXPERIMENTS_JSON, store)
     return {"deleted": True}
+
+class ChatRequest(BaseModel):
+    message: str
+    chat_history: Optional[List[Dict[str, str]]] = None
+    selected_country: Optional[str] = None
+
+chat_history = []
+
+@app.post("/api/v1/chat")
+def chat(req: ChatRequest):
+    agent_executor = get_agent_executor()
+    
+    history = []
+    if req.chat_history:
+        for msg in req.chat_history:
+            if msg.get('role') == 'user':
+                history.append(HumanMessage(content=msg.get('content')))
+            elif msg.get('role') == 'assistant':
+                history.append(AIMessage(content=msg.get('content')))
+
+    input_message = req.message
+    if req.selected_country and req.selected_country != 'None':
+        input_message = f"The user has selected the country '{req.selected_country}'.\n\nUser query: {req.message}"
+
+    response = agent_executor.invoke({"input": input_message, "chat_history": history})
+    return {"response": response['output']}
 
 if __name__ == "__main__":
     logger.info("Starting BrandCompass FastAPI server...")
