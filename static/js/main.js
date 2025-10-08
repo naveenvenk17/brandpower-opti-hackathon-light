@@ -89,3 +89,79 @@ function debounce(func, wait) {
 
 window.showNotification = showNotification;
 window.debounce = debounce;
+
+// Chat Widget
+document.addEventListener('DOMContentLoaded', function() {
+    const chatIcon = document.getElementById('chat-icon');
+    const chatWidget = document.getElementById('chat-widget');
+    const closeChat = document.getElementById('close-chat');
+    const chatBody = document.getElementById('chat-body');
+    const chatInput = document.getElementById('chat-input');
+    const sendChat = document.getElementById('send-chat');
+
+    let chatHistory = [];
+
+    chatIcon.addEventListener('click', () => {
+        chatWidget.style.display = 'flex';
+        chatIcon.style.display = 'none';
+    });
+
+    closeChat.addEventListener('click', () => {
+        chatWidget.style.display = 'none';
+        chatIcon.style.display = 'flex';
+    });
+
+    sendChat.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        appendMessage(message, 'user');
+        chatInput.value = '';
+
+        const selectedCountry = document.body.dataset.selectedCountry;
+
+        fetch('http://127.0.0.1:8010/api/v1/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                message: message, 
+                chat_history: chatHistory,
+                selected_country: selectedCountry
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            appendMessage(data.response, 'assistant');
+            chatHistory.push({ role: 'user', content: message });
+            chatHistory.push({ role: 'assistant', content: data.response });
+        })
+        .catch(error => {
+            appendMessage('Sorry, something went wrong.', 'assistant');
+            console.error('Error:', error);
+        });
+    }
+
+    function appendMessage(message, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message', sender + '-message');
+
+        if (sender === 'assistant') {
+            const converter = new showdown.Converter();
+            messageElement.innerHTML = converter.makeHtml(message);
+        } else {
+            messageElement.textContent = message;
+        }
+
+        chatBody.appendChild(messageElement);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+});

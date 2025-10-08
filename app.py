@@ -126,6 +126,12 @@ def create_template_csv():
 
 
 
+@app.route('/optimization')
+def optimization():
+    """Optimization page"""
+    return render_template('optimization.html')
+
+
 @app.route('/')
 def index():
     """Home page"""

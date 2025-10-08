@@ -10,11 +10,30 @@ import pandas as pd
 import numpy as np
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 import pickle
+
+from production_scripts.models.marketing.impact_model import MarketingImpactModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Placeholder for channel coefficients (example values)
+# In a real scenario, these would be derived from a trained model
+PLACEHOLDER_CHANNEL_COEFFICIENTS = {
+    'digital_spend': 0.000005,
+    'tv_spend': 0.000003,
+    'traditional_spend': 0.000002,
+    'sponsorship_spend': 0.000004,
+    'other_spend': 0.000001
+}
+
+# Placeholder for saturation parameters (example values)
+# In a real scenario, these would be derived from data analysis
+PLACEHOLDER_SATURATION_PARAMS = {
+    'alpha': 0.5,  # Diminishing returns parameter
+    'K_scale': 1_000_000 # Scale factor for K (half-saturation point)
+}
 
 
 class ForecastSimulateService:
@@ -62,13 +81,57 @@ class ForecastSimulateService:
             ['brand', 'country', 'year', 'quarter'] + self.feature_cols
         ]
 
+        # Initialize MarketingImpactModel for optimization
+        self.impact_model = MarketingImpactModel(
+            channel_coefficients=PLACEHOLDER_CHANNEL_COEFFICIENTS,
+            saturation_params=PLACEHOLDER_SATURATION_PARAMS
+        )
+        logger.info("✓ MarketingImpactModel initialized for optimization.")
+
+    def optimize_allocation(
+        self,
+        total_budget: float,
+        channels: Optional[List[str]] = None,
+        method: str = 'gradient',
+        digital_cap: float = 0.99,
+        tv_cap: float = 0.5
+    ) -> Dict[str, Any]:
+        """
+        Optimize marketing allocation using the MarketingImpactModel.
+
+        Args:
+            total_budget: Total marketing budget.
+            channels: List of channels to optimize.
+            method: Optimization method ('gradient' or 'evolutionary').
+            digital_cap: Maximum fraction of budget for digital.
+            tv_cap: Maximum fraction of budget for TV.
+
+        Returns:
+            Dictionary containing optimal allocation, expected lift, ROI, etc.
+        """
+        logger.info(f"Starting optimization for total budget: {total_budget}")
+        optimization_results = self.impact_model.optimize(
+            total_budget=total_budget,
+            channels=channels,
+            method=method,
+            digital_cap=digital_cap,
+            tv_cap=tv_cap
+        )
+        logger.info("✓ Optimization complete.")
+        return optimization_results
+
     def _quarter_to_month(self, quarter_str):
         q_map = {'Q1': '01', 'Q2': '04', 'Q3': '07', 'Q4': '10'}
         return q_map[quarter_str]
 
-    def forecast_baseline(self, save_path: Optional[str] = None) -> pd.DataFrame:
+    def forecast_baseline(self, country: Optional[str] = None, brand: Optional[str] = None, save_path: Optional[str] = None) -> pd.DataFrame:
         """
         Generate baseline forecast for all rows in forecast_features.csv
+
+        Args:
+            country: Optional country to filter the forecast.
+            brand: Optional brand to filter the forecast.
+            save_path: Optional path to save the forecast.
 
         Returns:
             DataFrame with columns: brand, country, year, quarter, predicted_power
@@ -80,6 +143,11 @@ class ForecastSimulateService:
 
         result = self.baseline_features_df[['brand', 'country', 'year', 'quarter']].copy()
         result['predicted_power'] = predictions
+
+        if country:
+            result = result[result['country'] == country]
+        if brand:
+            result = result[result['brand'] == brand]
 
         logger.info(f"✓ Generated {len(result)} baseline forecasts")
         logger.info(f"   Power range: [{result['predicted_power'].min():.4f}, {result['predicted_power'].max():.4f}]")
@@ -136,16 +204,13 @@ class ForecastSimulateService:
         # Create merge key
         merge_keys = ['country', 'brand', 'year', 'quarter']
 
-        # Merge to update marketing columns
-        for col in marketing_cols:
-            # Create a mapping from uploaded data
-            upload_mapping = quarterly_data.set_index(merge_keys)[col].to_dict()
+        # Set index for efficient update
+        simulated_features_df = simulated_features_df.set_index(merge_keys)
+        quarterly_data = quarterly_data.set_index(merge_keys)
 
-            # Update the features dataframe
-            for idx, row in simulated_features_df.iterrows():
-                key = tuple(row[merge_keys])
-                if key in upload_mapping:
-                    simulated_features_df.at[idx, col] = upload_mapping[key]
+        # Update the spend columns
+        simulated_features_df.update(quarterly_data[marketing_cols])
+        simulated_features_df.reset_index(inplace=True)
 
         # Update total_marketing_spend
         simulated_features_df['total_marketing_spend'] = simulated_features_df[marketing_cols].sum(axis=1)
