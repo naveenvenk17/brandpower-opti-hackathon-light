@@ -1,0 +1,46 @@
+name: Run Tests
+
+# Run tests on all branches and PRs
+on:
+  push:
+    branches-ignore:
+      - dev  # Handled by ci-cd-dev.yml
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run Tests
+        run: |
+          pytest tests/ -v --disable-warnings
+        env:
+          AZURE_OPENAI_API_KEY: ""
+      
+      - name: Tests Passed
+        run: echo "All tests passed for Python ${{ matrix.python-version }}!"
+

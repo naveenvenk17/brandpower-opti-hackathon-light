@@ -52,8 +52,11 @@ class TestFastAPIEndpoints:
 
     def test_health_endpoint(self):
         response = client.get("/health")
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        # Health check may return 200 (healthy) or 503 (degraded/unhealthy)
+        assert response.status_code in [200, 503]
+        data = response.json()
+        assert "status" in data
+        assert "checks" in data
 
     @pytest.mark.usefixtures("mock_service")
     def test_forecast_baseline_endpoint(self):

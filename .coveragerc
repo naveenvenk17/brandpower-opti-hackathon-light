@@ -5,15 +5,16 @@ omit =
     */tests/*
     */venv/*
     */__pycache__/*
-    src/main.py
-    src/fastapi_app.py
     src/utils/web_utils.py
     src/utils/__init__.py
     src/models/__init__.py
     src/agent/master_agent.py
+    src/config.py
+    src/logging_config.py
 
 [report]
 precision = 2
+fail_under = 90
 exclude_lines =
     pragma: no cover
     def __repr__
@@ -25,7 +26,9 @@ exclude_lines =
     # Exclude template rendering and file downloads (UI infrastructure)
     return templates\.TemplateResponse
     return FileResponse
-    # Exclude JSON persistence helpers (tested separately)
-    _save_json
-    _load_json
+    # Exclude CLI entry point
+    import argparse
+    import uvicorn
+    parser = argparse.ArgumentParser
+    uvicorn.run
 

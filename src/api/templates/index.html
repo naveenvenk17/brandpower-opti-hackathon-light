@@ -35,6 +35,29 @@
         </div>
     </section>
 
+    <section class="mb-5 text-center">
+        <h2 class="section-header">Choose Mode</h2>
+        <div class="card" style="max-width: 700px; margin: 0 auto;">
+            <div class="card-body">
+                <div id="modeRequirementAlert" class="alert alert-warning" style="display:none;">
+                    <strong>Requirement:</strong>
+                    <ul class="mt-2 mb-0" style="padding-left: 1.5rem; text-align: left;">
+                        <li>Select a country first</li>
+                    </ul>
+                </div>
+
+                <div style="display:flex; gap: 1rem; flex-wrap: wrap; justify-content:center;">
+                    <button class="btn btn-primary btn-slim" style="min-width: 180px;" onclick="chooseMode('simulator')"
+                        id="simulatorBtn" disabled>Simulator</button>
+                    <button class="btn btn-secondary btn-slim" style="min-width: 180px;"
+                        onclick="chooseMode('optimizer')" id="optimizerBtn" disabled>Optimizer</button>
+                </div>
+
+                <p class="mt-3 text-muted" id="modeHint" style="display:none;">Upload your data below to continue...</p>
+            </div>
+        </div>
+    </section>
+
     <section class="mb-5">
         <h2 class="section-header">Upload Data</h2>
 
@@ -83,27 +106,6 @@
             </div>
         </div>
     </section>
-
-    <section class="mb-5 text-center">
-        <h2 class="section-header">Start Simulation</h2>
-
-        <div class="card" style="max-width: 600px; margin: 0 auto;">
-            <div class="card-body">
-                <div id="requirementsAlert" class="alert alert-warning">
-                    <strong>Requirements:</strong>
-                    <ul class="mt-2 mb-0" style="padding-left: 1.5rem; text-align: left;">
-                        <li id="reqCountry">Select a country</li>
-                        <li id="reqUpload">Upload your data file</li>
-                    </ul>
-                </div>
-
-                <button class="btn btn-primary btn-slim" style="width: 100%;" onclick="startSimulation()" id="startSimBtn" disabled>Start
-                    Simulation</button>
-
-                <p id="readyMessage" class="mt-3 text-muted" style="display:none;">Ready to analyze your brand power!</p>
-            </div>
-        </div>
-    </section>
 </div>
 
 <style>
@@ -149,19 +151,28 @@
     // --- Session state (no auto-persistence) ---
     let selectedCountry = null;
     let uploadedFileInfo = null;
+    let chosenMode = null;
 
     function updateUIFromState() {
         // Selected country alert
         const selectedCountryAlert = document.getElementById('selectedCountryAlert');
         const selectedCountryName = document.getElementById('selectedCountryName');
+        const simulatorBtn = document.getElementById('simulatorBtn');
+        const optimizerBtn = document.getElementById('optimizerBtn');
+        const modeRequirementAlert = document.getElementById('modeRequirementAlert');
+
         if (selectedCountry) {
             selectedCountryAlert.style.display = 'block';
             selectedCountryName.textContent = selectedCountry;
             document.body.dataset.selectedCountry = selectedCountry;
-            document.getElementById('reqCountry').style.textDecoration = 'line-through';
+            simulatorBtn.disabled = false;
+            optimizerBtn.disabled = false;
+            modeRequirementAlert.style.display = 'none';
         } else {
             selectedCountryAlert.style.display = 'none';
-            document.getElementById('reqCountry').style.textDecoration = 'none';
+            simulatorBtn.disabled = true;
+            optimizerBtn.disabled = true;
+            modeRequirementAlert.style.display = 'block';
         }
 
         // Uploaded file info
@@ -171,18 +182,17 @@
             document.getElementById('uploadedFileName').textContent = uploadedFileInfo.filename;
             document.getElementById('uploadedRows').textContent = uploadedFileInfo.rows || 0;
             document.getElementById('uploadedCols').textContent = uploadedFileInfo.cols || 0;
-            document.getElementById('reqUpload').style.textDecoration = 'line-through';
         } else {
             uploadedInfoDiv.style.display = 'none';
-            document.getElementById('reqUpload').style.textDecoration = 'none';
         }
+    }
 
-        // Enable Start button when ready
-        const ready = Boolean(selectedCountry) && Boolean(uploadedFileInfo && uploadedFileInfo.success);
-        const startBtn = document.getElementById('startSimBtn');
-        const readyMsg = document.getElementById('readyMessage');
-        startBtn.disabled = !ready;
-        readyMsg.style.display = ready ? 'block' : 'none';
+    function chooseMode(mode) {
+        chosenMode = mode;
+        const hint = document.getElementById('modeHint');
+        if (hint) hint.style.display = 'block';
+        const fileInputEl = document.getElementById('fileInput');
+        if (fileInputEl) fileInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function selectCountry(country) {
@@ -226,6 +236,15 @@
                     // Store in session variable only (not persisted)
                     uploadedFileInfo = data;
                     updateUIFromState();
+
+                    // Redirect based on chosen mode
+                    setTimeout(() => {
+                        if (chosenMode === 'optimizer') {
+                            window.location.href = '/optimization';
+                        } else {
+                            window.location.href = '/analysis';
+                        }
+                    }, 800);
                 } else {
                     statusDiv.innerHTML = `
                 <div class="alert alert-danger">
@@ -241,10 +260,6 @@
             </div>
         `;
             });
-    }
-
-    function startSimulation() {
-        window.location.href = '/analysis';
     }
 
     // Drag and drop functionality

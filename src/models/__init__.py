@@ -1,19 +1,13 @@
 """
-Models loader - Simple .pkl file loading
-Only contains model loading logic, no business logic
+Models loader - Only uses AutoGluon model from models/ directory
+All model references point to models/colombia_round_1_weekly_model (AutoGluon)
 """
-import pickle
 from pathlib import Path
 
-# Base path for models directory
+# Base path for models directory - contains only AutoGluon model
 MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
-# Load brand power forecasting model
-with open(MODELS_DIR / 'brand_power_forecaster.pkl', 'rb') as f:
-    brand_power_forecaster = pickle.load(f)
+# AutoGluon model path (colombia_round_1_weekly_model)
+AUTOGLUON_MODEL_PATH = MODELS_DIR
 
-# Load unified model (if needed)
-with open(MODELS_DIR / 'unified_brand_power_model.pkl', 'rb') as f:
-    unified_model = pickle.load(f)
-
-__all__ = ['brand_power_forecaster', 'unified_model', 'MODELS_DIR']
+__all__ = ['MODELS_DIR', 'AUTOGLUON_MODEL_PATH']

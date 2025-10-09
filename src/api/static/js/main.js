@@ -98,17 +98,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatBody = document.getElementById('chat-body');
     const chatInput = document.getElementById('chat-input');
     const sendChat = document.getElementById('send-chat');
+    const chatBackdrop = document.getElementById('chat-backdrop');
 
     let chatHistory = [];
 
     chatIcon.addEventListener('click', () => {
         chatWidget.style.display = 'flex';
         chatIcon.style.display = 'none';
+        chatBackdrop.classList.add('show');
     });
 
     closeChat.addEventListener('click', () => {
         chatWidget.style.display = 'none';
         chatIcon.style.display = 'flex';
+        chatBackdrop.classList.remove('show');
+    });
+
+    // Click on backdrop to close chat
+    chatBackdrop.addEventListener('click', () => {
+        chatWidget.style.display = 'none';
+        chatIcon.style.display = 'flex';
+        chatBackdrop.classList.remove('show');
     });
 
     sendChat.addEventListener('click', sendMessage);
@@ -125,9 +135,21 @@ document.addEventListener('DOMContentLoaded', function() {
         appendMessage(message, 'user');
         chatInput.value = '';
 
+        // Show engaging loading message
+        const loadingMessages = [
+            '🔍 Analyzing your request...',
+            '📊 Crunching the numbers...',
+            '🤔 Thinking...',
+            '📈 Fetching forecast data...',
+            '⚡ Processing...',
+            '🎯 Working on it...'
+        ];
+        const loadingMsg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+        const loadingElement = appendLoadingMessage(loadingMsg);
+
         const selectedCountry = document.body.dataset.selectedCountry;
 
-        fetch('http://127.0.0.1:8010/api/v1/chat', {
+        fetch('/api/v1/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -140,14 +162,36 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            // Remove loading message
+            if (loadingElement && loadingElement.parentNode) {
+                loadingElement.remove();
+            }
+            
             appendMessage(data.response, 'assistant');
             chatHistory.push({ role: 'user', content: message });
             chatHistory.push({ role: 'assistant', content: data.response });
         })
         .catch(error => {
-            appendMessage('Sorry, something went wrong.', 'assistant');
+            // Remove loading message
+            if (loadingElement && loadingElement.parentNode) {
+                loadingElement.remove();
+            }
+            
+            appendMessage('Sorry, something went wrong. Please try again.', 'assistant');
             console.error('Error:', error);
         });
+    }
+
+    function appendLoadingMessage(message) {
+        const loadingElement = document.createElement('div');
+        loadingElement.classList.add('chat-loading');
+        loadingElement.innerHTML = `
+            <div class="spinner"></div>
+            <span>${message}</span>
+        `;
+        chatBody.appendChild(loadingElement);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return loadingElement;
     }
 
     function appendMessage(message, sender) {

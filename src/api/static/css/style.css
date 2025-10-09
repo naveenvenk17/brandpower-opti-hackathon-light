@@ -836,7 +836,91 @@ body {
     background-color: #e0e7ff;
     color: var(--primary-blue);
     border-radius: 9999px;
+}
+
+/* Optimizer Page Specific Styles */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge.bg-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.badge.bg-warning {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.badge.bg-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+/* Table improvements for optimizer */
+.table-container {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+}
+
+.table-container table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: #6b7280;
+}
+
+.table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Summary cards row */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.col {
+    flex: 1;
+    min-width: 0;
 } 
+
+/* Chat Backdrop - Dims background when chat is open */
+.chat-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.chat-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
 /* Chat Widget */
 .chat-icon {
@@ -871,7 +955,7 @@ body {
     position: fixed;
     bottom: calc(var(--spacing-md) + 56px + var(--spacing-sm)); /* Icon height + margin */
     right: var(--spacing-md);
-    width: 380px;
+    width: 456px; /* Increased by 20% from 380px */
     max-width: 90%;
     background-color: var(--white);
     border-radius: var(--border-radius-lg);
@@ -915,7 +999,7 @@ body {
 
 .chat-body {
     padding: var(--spacing-md);
-    height: 320px;
+    height: 420px; /* Increased by ~30% from 320px for better readability */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -979,4 +1063,67 @@ body {
 
 #send-chat:hover {
     background-color: var(--primary-blue-dark);
+}
+
+/* Loading indicator for chat */
+.chat-loading {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius-md);
+    align-self: flex-start;
+    max-width: 85%;
+    font-size: 0.85rem;
+    color: var(--medium-gray);
+    font-style: italic;
+}
+
+.chat-loading .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--light-gray);
+    border-top: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Compact message styling */
+.assistant-message {
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.assistant-message h3 {
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-blue);
+}
+
+.assistant-message ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.assistant-message li {
+    margin: 0.25rem 0;
+}
+
+.assistant-message strong {
+    color: var(--primary-blue);
+    font-weight: 600;
+}
+
+.assistant-message code {
+    background-color: var(--off-white);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
 }

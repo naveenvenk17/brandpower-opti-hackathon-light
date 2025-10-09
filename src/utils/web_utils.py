@@ -3,16 +3,9 @@ import numpy as np
 import os
 
 
-# Updated to match the simplified marketing spend columns from backend
-lst_optimize_allowed_features = ["digital_spend", "tv_spend", "traditional_spend", "sponsorship_spend", "other_spend"]
-
-# Keep original features list for backward compatibility (if needed)
-lst_optimize_allowed_features_legacy = ["brand events", "brand promotion", "digitaldisplayandsearch", "digitalvideo", "influencer",
-                                 "meta", "ooh", "opentv", "others", "paytv", "radio", "sponsorship", "streamingaudio", "tiktok", "twitter", "youtube",]
-
-lst_fixed_featured = ["avg_prcp", "consumer price index, core", "consumer_price_inflation", "cpi_adjusted_personal_income", "discount", "discounted_price_ratio", "domestic demand % of gdp", "gdp per capita, lcu", "inflation, cpi, aop", "personal disposable income, lcu",
-                      "population, growth", "population, total", "population, working age", "Private consumption including NPISHs, real, LCU", "real fx index", "real_disposable_income", "retail sales, value index", "retail sales, volume index", "unemployment rate", "week_of_month"]
-lst_id_columns = ["country", "brand", "year", "month", "week_of_month", "quarter"]
+lst_optimize_allowed_features = ['wholesalers','total_distribution', 'paytv', 'volume']
+lst_fixed_featured = ['brand', 'year', 'retail sales, value index', 'month', 'consumer price index, core', 'inflation, cpi, aop', 'normalized sales (in hectoliters)', 'normalized sales value', 'real fx index', 'retail sales, volume index']
+lst_id_columns = ["country", "brand", "year", "month", "week_of_month"]
 lst_target_columns = ["power"]
 
 

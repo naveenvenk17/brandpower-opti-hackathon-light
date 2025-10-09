@@ -10,6 +10,52 @@
         padding: 0;
     }
 
+    /* Tooltip styles for grouped columns */
+    .grouped-column-header {
+        position: relative;
+        cursor: help;
+    }
+
+    .tooltip-hover {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f2937;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        margin-bottom: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .tooltip-hover::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #1f2937;
+    }
+
+    .grouped-column-header:hover .tooltip-hover {
+        opacity: 1;
+    }
+
+    .info-icon {
+        font-size: 0.8em;
+        color: #6b7280;
+        margin-left: 4px;
+        font-weight: normal;
+    }
+
     .main-content {
         padding: 0 !important;
     }
@@ -199,12 +245,19 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('brand', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('brand', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search brands..." data-search="brand">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
+                                    {% set default_brand = 'AGUILA' %}
                                     {% for brand in brands %}
-                                    <div class="multi-select-option"
+                                    <div class="multi-select-option {% if brand|upper == default_brand %}selected{% endif %}"
                                         data-value="{{ brand }}" data-filter-type="brand" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ brand }}</span>
@@ -222,12 +275,18 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('year', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('year', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search years..." data-search="year">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
                                     {% for year in years %}
-                                    <div class="multi-select-option"
+                                    <div class="multi-select-option {% if year == 2024 %}selected{% endif %}"
                                         data-value="{{ year }}" data-filter-type="year" role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ year }}</span>
@@ -245,15 +304,53 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('month', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('month', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search months..." data-search="month">
                                 </div>
                                 <div class="multi-select-options" role="listbox">
+                                    {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                                    'Oct', 'Nov', 'Dec'] %}
                                     {% for month in months %}
                                     <div class="multi-select-option"
                                         data-value="{{ month }}" data-filter-type="month" role="option">
                                         <div class="multi-select-checkbox"></div>
-                                        <span>Month {{ month }}</span>
+                                        <span>{{ month }} - {{ month_names[month - 1] if month >= 1 and month <= 12
+                                                else 'Month ' ~ month }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Week Filter Multi-Select -->
+                        <div class="multi-select-container" data-filter="week">
+                            <button class="multi-select-trigger" type="button" aria-haspopup="listbox"
+                                aria-expanded="false">
+                                <span class="multi-select-value">Select weeks</span>
+                                <span class="multi-select-icon">▼</span>
+                            </button>
+                            <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn" onclick="selectAllFilter('week', event)">Select
+                                        All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('week', event)">Clear</button>
+                                </div>
+                                <div class="multi-select-search">
+                                    <input type="text" placeholder="Search weeks..." data-search="week">
+                                </div>
+                                <div class="multi-select-options" role="listbox">
+                                    {% for week in weeks %}
+                                    <div class="multi-select-option" data-value="{{ week }}" data-filter-type="week"
+                                        role="option">
+                                        <div class="multi-select-checkbox"></div>
+                                        <span>Week {{ week }}</span>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -272,13 +369,29 @@
             </div>
         </section>
 
-        <section class="mb-5 text-center">
+        <section class="mb-5">
             <h2 class="section-header">Calculate Brand Power</h2>
 
-            <div class="card" style="max-width: 600px; margin: 0 auto;">
+            <div class="card">
                 <div class="card-body">
-                    <button class="btn btn-primary btn-large btn-block" onclick="calculatePower()">Calculate Brand
-                        Power</button>
+                    <div style="display: flex; gap: 2rem; align-items: center;">
+                        <div style="flex: 0 0 auto;">
+                            <button class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;"
+                                onclick="calculatePower()">Calculate Brand Power</button>
+                        </div>
+                        <div style="flex: 1;">
+                            <div id="changesSummary"
+                                style="background: #f9fafb; padding: 1rem; border-radius: 6px; border-left: 3px solid #1e50a2;">
+                                <strong
+                                    style="color: #374151; font-size: 0.95rem; margin-bottom: 0.75rem; display: block;">Changes
+                                    Summary:</strong>
+                                <div id="changesList" style="font-size: 0.875rem; color: #6b7280;">
+                                    <p style="text-align: center; color: #9ca3af; font-style: italic; margin: 0;">No
+                                        changes made yet. Edit values in the table above to see changes here.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -287,7 +400,11 @@
             <h2 class="section-header">Results</h2>
 
             <div class="card">
-                <div class="card-header">Quarterly Brand Power Forecast</div>
+                <div class="card-header" style="display:flex; justify-content: space-between; align-items:center;">
+                    <span>Quarterly Brand Power Forecast</span>
+                    <button id="downloadPowerBtn" class="btn btn-secondary btn-slim"
+                        onclick="downloadCurrentPowerCSV()">Download CSV</button>
+                </div>
                 <div class="card-body">
                     <div id="resultsTable" style="max-height: 450px; overflow-y: auto;"></div>
                     <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
@@ -299,6 +416,12 @@
                                 <span class="multi-select-icon">▼</span>
                             </button>
                             <div class="multi-select-dropdown">
+                                <div class="multi-select-actions">
+                                    <button class="filter-action-btn"
+                                        onclick="selectAllFilter('chart-brand', event)">Select All</button>
+                                    <button class="filter-action-btn"
+                                        onclick="clearFilter('chart-brand', event)">Clear</button>
+                                </div>
                                 <div class="multi-select-search">
                                     <input type="text" placeholder="Search brands..." data-search="chart-brand">
                                 </div>
@@ -375,43 +498,62 @@
 </style>
 
 <!-- Server-provided data for JS -->
-<div id="server-data" data-table-columns='{{ table_columns | tojson | safe if table_columns is defined else "[]" }}'
+<div id="server-data" 
+    data-brands='{{ brands | tojson | safe if brands is defined else "[]" }}'
+    data-years='{{ years | tojson | safe if years is defined else "[]" }}'
+    data-months='{{ months | tojson | safe if months is defined else "[]" }}'
+    data-weeks='{{ weeks | tojson | safe if weeks is defined else "[]" }}'
+    data-table-columns='{{ table_columns | tojson | safe if table_columns is defined else "[]" }}'
     data-table-rows='{{ table_rows | tojson | safe if table_rows is defined else "[]" }}'
-    data-feature-columns='{{ feature_columns | tojson | safe if feature_columns is defined else "[]" }}'>
+    data-feature-columns='{{ feature_columns | tojson | safe if feature_columns is defined else "[]" }}'
+    data-channel-groups='{{ channel_groups | tojson | safe if channel_groups is defined else "{}" }}'>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+    // Set selected country in body dataset for chat widget
+    {% if selected_country %}
+    document.body.dataset.selectedCountry = "{{ selected_country }}";
+    {% endif %}
+
     let baselineData = null;
     let simulatedData = null;
+    let historicalData = null;
+    let historicalQuarters = null;
     let currentChanges = {};
+    let currentQuarters = null;
+    let originalTableRows = null;
     const __serverEl = document.getElementById('server-data');
     let tableColumns = JSON.parse((__serverEl && __serverEl.dataset.tableColumns) ? __serverEl.dataset.tableColumns : '[]');
     let tableRows = JSON.parse((__serverEl && __serverEl.dataset.tableRows) ? __serverEl.dataset.tableRows : '[]');
     let featureColumns = JSON.parse((__serverEl && __serverEl.dataset.featureColumns) ? __serverEl.dataset.featureColumns : '[]');
+    let channelGroups = JSON.parse((__serverEl && __serverEl.dataset.channelGroups) ? __serverEl.dataset.channelGroups : '{}');
 
     function renderEditableTable() {
         const container = document.getElementById('editableTable');
         if (!container) return;
 
         const featuresSet = new Set(featureColumns);
+        const isPercentage = document.getElementById('percentageToggle') ? document.getElementById('percentageToggle').checked : false;
 
-        // Get filter values
+        // Get filter values - ADD WEEKS
         const selBrands = multiSelects['brand'] ? multiSelects['brand'].getSelectedValues() : [];
         const selYears = multiSelects['year'] ? multiSelects['year'].getSelectedValues().map(v => parseInt(v)) : [];
         const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
+        const selWeeks = multiSelects['week'] ? multiSelects['week'].getSelectedValues().map(v => parseInt(v)) : [];
 
         // Determine ID column names (flexible)
         const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
         const yearCol = tableColumns.find(c => c.toLowerCase() === 'year') || 'year';
         const monthCol = tableColumns.find(c => c.toLowerCase() === 'month') || 'month';
+        const weekCol = tableColumns.find(c => c.toLowerCase() === 'week_of_month' || c.toLowerCase() === 'week') || 'week_of_month';
 
-        let html = '<table class="table table-striped"><thead><tr>';
-        tableColumns.forEach(col => { html += `<th>${col}</th>`; });
-        html += '</tr></thead><tbody>';
+        // Calculate column totals for percentage mode
+        const filteredRowIndices = [];
+        const columnTotals = {};
 
         tableRows.forEach((row, rIdx) => {
-            // Apply filters
+            // Apply filters - ADD WEEK FILTER
             let show = true;
             if (selBrands.length > 0 && brandCol && row[brandCol]) {
                 show = show && selBrands.includes(String(row[brandCol]));
@@ -422,17 +564,56 @@
             if (selMonths.length > 0 && monthCol && row[monthCol]) {
                 show = show && selMonths.includes(parseInt(row[monthCol]));
             }
+            // NEW: Week filter
+            if (selWeeks.length > 0 && weekCol && row[weekCol]) {
+                show = show && selWeeks.includes(parseInt(row[weekCol]));
+            }
 
-            if (!show) return; // Skip filtered out rows
+            if (show) {
+                filteredRowIndices.push(rIdx);
+                if (isPercentage) {
+                    featureColumns.forEach(col => {
+                        const val = parseFloat(row[col]) || 0;
+                        columnTotals[col] = (columnTotals[col] || 0) + val;
+                    });
+                }
+            }
+        });
 
+        // Build HTML with tooltips for grouped columns
+        let html = '<table class="table table-striped"><thead><tr>';
+        tableColumns.forEach(col => {
+            // NEW: Check if this column is a grouped channel
+            if (channelGroups[col]) {
+                const components = channelGroups[col].join(', ');
+                html += `<th class="grouped-column-header">
+                    ${col}
+                    <span class="info-icon">ⓘ</span>
+                    <div class="tooltip-hover">Components: ${components}</div>
+                </th>`;
+            } else {
+                html += `<th>${col}</th>`;
+            }
+        });
+        html += '</tr></thead><tbody>';
+
+        filteredRowIndices.forEach(rIdx => {
+            const row = tableRows[rIdx];
             html += '<tr>';
             tableColumns.forEach(col => {
-                const val = row[col] !== undefined ? row[col] : '';
+                const rawVal = row[col] !== undefined ? row[col] : '';
                 const isEditable = featuresSet.has(col);
-                if (isEditable) {
-                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${val}" class="form-control" style="min-width: 100px;"></td>`;
+
+                // NEW: Percentage mode support
+                if (isEditable && isPercentage) {
+                    const numVal = parseFloat(rawVal) || 0;
+                    const total = columnTotals[col] || 1;
+                    const percentage = total > 0 ? (numVal / total * 100).toFixed(2) : '0.00';
+                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${percentage}" class="form-control" style="min-width: 100px;" step="0.01" data-percentage="true" data-total="${total}"> <span style="font-size: 0.875rem; color: #6b7280;">%</span></td>`;
+                } else if (isEditable) {
+                    html += `<td><input type="number" data-row="${rIdx}" data-col="${col}" value="${rawVal}" class="form-control" style="min-width: 100px;"></td>`;
                 } else {
-                    html += `<td>${val}</td>`;
+                    html += `<td>${rawVal}</td>`;
                 }
             });
             html += '</tr>';
@@ -445,20 +626,192 @@
             input.addEventListener('change', (e) => {
                 const rowIndex = parseInt(e.target.getAttribute('data-row'));
                 const colName = e.target.getAttribute('data-col');
-                const newVal = parseFloat(e.target.value);
-                tableRows[rowIndex][colName] = isNaN(newVal) ? 0 : newVal;
-                // accumulate total change per feature (% change vs original sum not known here); we pass absolute deltas
-                if (!isNaN(newVal)) {
-                    currentChanges[colName] = (currentChanges[colName] || 0) + 0; // placeholder; server uses sums
+                const inputVal = parseFloat(e.target.value);
+
+                if (e.target.hasAttribute('data-percentage')) {
+                    const total = parseFloat(e.target.getAttribute('data-total')) || 0;
+                    const absoluteVal = (inputVal / 100) * total;
+                    tableRows[rowIndex][colName] = isNaN(absoluteVal) ? 0 : absoluteVal;
+                } else {
+                    tableRows[rowIndex][colName] = isNaN(inputVal) ? 0 : inputVal;
                 }
+
+                // NEW: Update changes summary
+                updateChangesSummary();
             });
         });
     }
 
+    function updateChangesSummary() {
+        // Store original on first call
+        if (!originalTableRows) {
+            originalTableRows = JSON.parse(JSON.stringify(tableRows));
+        }
+
+        const changesListEl = document.getElementById('changesList');
+        if (!changesListEl) return;
+
+        const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
+
+        // Build per-brand sums
+        const originalByBrand = {};
+        const currentByBrand = {};
+
+        originalTableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!originalByBrand[brand]) originalByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                originalByBrand[brand][col] = (originalByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        tableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!currentByBrand[brand]) currentByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                currentByBrand[brand][col] = (currentByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        // Compute deltas
+        const brands = Array.from(new Set([...Object.keys(originalByBrand), ...Object.keys(currentByBrand)])).sort();
+        const detailedChanges = [];
+
+        brands.forEach(brand => {
+            featureColumns.forEach(col => {
+                const orig = (originalByBrand[brand] && originalByBrand[brand][col]) || 0;
+                const curr = (currentByBrand[brand] && currentByBrand[brand][col]) || 0;
+                const delta = curr - orig;
+                if (Math.abs(delta) > 0.01) {
+                    const pctChange = orig !== 0 ? (delta / orig) * 100 : 0;
+                    detailedChanges.push({ brand, col, delta, pctChange });
+                }
+            });
+        });
+
+        // Render results
+        if (detailedChanges.length === 0) {
+            changesListEl.innerHTML = '<p style="text-align: center; color: #9ca3af; font-style: italic; margin: 0;">No changes made yet.</p>';
+            return;
+        }
+
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">';
+        html += '<thead><tr style="border-bottom: 2px solid #e5e7eb;">';
+        html += '<th style="text-align: left; padding: 0.5rem; font-weight: 600;">Brand</th>';
+        html += '<th style="text-align: left; padding: 0.5rem; font-weight: 600;">Column</th>';
+        html += '<th style="text-align: right; padding: 0.5rem; font-weight: 600;">Delta</th>';
+        html += '<th style="text-align: right; padding: 0.5rem; font-weight: 600;">% Change</th>';
+        html += '</tr></thead><tbody>';
+
+        detailedChanges.forEach(item => {
+            const sign = item.delta >= 0 ? '+' : '';
+            const color = item.delta >= 0 ? '#10b981' : '#ef4444';
+            html += `
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.5rem;">${item.brand}</td>
+                    <td style="padding: 0.5rem;">${item.col}</td>
+                    <td style="padding: 0.5rem; text-align: right; color: ${color}; font-weight: 600;">${sign}${Math.round(item.delta).toLocaleString()}</td>
+                    <td style="padding: 0.5rem; text-align: right; color: ${color};">${sign}${item.pctChange.toFixed(1)}%</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        changesListEl.innerHTML = html;
+    }
+
     function togglePercentageView() {
-        const checked = document.getElementById('percentageToggle').checked;
-        // In a full implementation we would recompute percentages server-side.
-        // For now we keep values as-is; calculation endpoint uses absolute deltas.
+        renderEditableTable();
+    }
+
+    // Add listener for percentage toggle
+    if (document.getElementById('percentageToggle')) {
+        document.getElementById('percentageToggle').addEventListener('change', togglePercentageView);
+    }
+
+    function downloadCurrentPowerCSV() {
+        if (!baselineData || !simulatedData) {
+            alert('No data available. Please calculate results first.');
+            return;
+        }
+
+        const quarters = currentQuarters || ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'];
+        const brands = Object.keys(baselineData);
+
+        let csvContent = 'Brand,Quarter,Baseline_Power,Simulated_Power\n';
+
+        brands.forEach(brand => {
+            quarters.forEach((q, i) => {
+                const baseline = baselineData[brand][i] || 0;
+                const simulated = simulatedData[brand][i] || 0;
+                csvContent += `${brand},${q},${baseline.toFixed(4)},${simulated.toFixed(4)}\n`;
+            });
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'brand_power_forecast.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        console.log('CSV download initiated');
+    }
+
+    function selectAllFilter(filterType, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const container = document.querySelector(`[data-filter="${filterType}"]`);
+        if (!container) return;
+
+        const options = container.querySelectorAll('.multi-select-option');
+        options.forEach(opt => opt.classList.add('selected'));
+
+        // Update the multi-select value display
+        if (multiSelects[filterType]) {
+            multiSelects[filterType].updateValue();
+        }
+
+        // Re-render table if it's a table filter
+        if (['brand', 'year', 'month', 'week'].includes(filterType)) {
+            setTimeout(() => renderEditableTable(), 50);
+        }
+
+        // Re-render chart if it's chart filter
+        if (filterType === 'chart-brand' && baselineData && simulatedData) {
+            setTimeout(() => createChart(baselineData, simulatedData, currentQuarters || ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []), 50);
+        }
+    }
+
+    function clearFilter(filterType, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const container = document.querySelector(`[data-filter="${filterType}"]`);
+        if (!container) return;
+
+        const options = container.querySelectorAll('.multi-select-option');
+        options.forEach(opt => opt.classList.remove('selected'));
+
+        // Update the multi-select value display
+        if (multiSelects[filterType]) {
+            multiSelects[filterType].updateValue();
+        }
+
+        // Re-render table if it's a table filter
+        if (['brand', 'year', 'month', 'week'].includes(filterType)) {
+            setTimeout(() => renderEditableTable(), 50);
+        }
+
+        // Re-render chart if it's chart filter
+        if (filterType === 'chart-brand' && baselineData && simulatedData) {
+            setTimeout(() => createChart(baselineData, simulatedData, currentQuarters || ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []), 50);
+        }
     }
 
     function calculatePower() {
@@ -492,6 +845,12 @@
             .then(data => {
                 baselineData = data.baseline;
                 simulatedData = data.simulated;
+                historicalData = data.historical || {};
+                historicalQuarters = data.historical_quarters || [];
+                currentQuarters = data.quarters || ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'];
+                console.log('=== CALCULATE POWER RESPONSE ===');
+                console.log('Historical data:', historicalData);
+                console.log('Historical quarters:', historicalQuarters);
                 displayResults(data);
             })
             .catch(error => {
@@ -561,43 +920,302 @@
         document.getElementById('resultsTable').innerHTML = tableHTML;
 
         populateBrandFilter(Object.keys(baseline));
-        createChart(baseline, simulated, quarters);
+        // Pass historical data and quarters to chart
+        const historical = data.historical || {};
+        const historicalQuarters = data.historical_quarters || [];
+        console.log('Creating chart with historical data:', historical, historicalQuarters);
+        createChart(baseline, simulated, quarters, historical, historicalQuarters);
     }
 
-    function createChart(baseline, simulated, quarters) {
+    function createChart(baseline, simulated, quarters, historical = {}, historicalQuarters = []) {
         const traces = [];
+
+        // Defensive checks
+        if (!baseline || typeof baseline !== 'object') {
+            console.error('Baseline data is invalid:', baseline);
+            return;
+        }
+
+        if (!simulated || typeof simulated !== 'object') {
+            console.error('Simulated data is invalid:', simulated);
+            return;
+        }
+
         const selected = multiSelects['chart-brand'] ? multiSelects['chart-brand'].getSelectedValues() : [];
         const brandsToShow = selected.length ? selected : Object.keys(baseline);
 
-        brandsToShow.forEach((brand, i) => {
-            traces.push({
-                x: quarters,
-                y: baseline[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Baseline`,
-                line: { width: 3 },
-                marker: { size: 8 }
-            });
+        console.log('=== CHART DATA ===');
+        console.log('Historical quarters:', historicalQuarters);
+        console.log('Forecast quarters:', quarters);
+        console.log('Brands to show:', brandsToShow);
+        console.log('Baseline keys:', Object.keys(baseline));
+        console.log('Simulated keys:', Object.keys(simulated));
+        console.log('Historical keys:', Object.keys(historical));
 
-            traces.push({
-                x: quarters,
-                y: simulated[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Simulated`,
-                line: { width: 3, dash: 'dash' },
-                marker: { size: 8, symbol: 'diamond' }
-            });
-        });
+        if (!brandsToShow || brandsToShow.length === 0) {
+            console.error('No brands to show');
+            return;
+        }
 
-        const layout = {
-            title: 'Baseline vs Simulated Power Forecast',
-            xaxis: { title: 'Quarter' },
-            yaxis: { title: 'Power' },
-            height: 500,
-            hovermode: 'x unified'
+        // Margin of error percentages for each quarter (starts at 0% for 2024 Q2)
+        const marginOfError = {
+            '2024 Q2': 0.00,  // 0% at intervention point
+            '2024 Q3': 0.01,  // 1%
+            '2024 Q4': 0.02,  // 2%
+            '2025 Q1': 0.03,  // 3%
+            '2025 Q2': 0.04   // 4%
         };
 
-        Plotly.newPlot('chartContainer', traces, layout);
+        brandsToShow.forEach((brand, i) => {
+            // Historical data (pre-intervention) - DEEP BLUE solid line (thicker)
+            const hasHistoricalData = historical && historical[brand] && historicalQuarters && historicalQuarters.length > 0;
+
+            if (hasHistoricalData) {
+                traces.push({
+                    x: historicalQuarters,
+                    y: historical[brand],
+                    mode: 'lines+markers',
+                    name: `${brand} - Historical`,
+                    line: { width: 3, color: '#0072B2' },  // Deep Blue
+                    marker: { size: 6, color: '#0072B2', symbol: 'circle' },
+                    connectgaps: false
+                });
+                console.log(`${brand} Historical:`, historical[brand]);
+            }
+
+            // Baseline forecast (post-intervention) - AMBER solid line with margin of error
+            if (baseline[brand] && Array.isArray(baseline[brand])) {
+                let baselineX = quarters;
+                let baselineY = baseline[brand];
+
+                // Connect from 2024 Q2 (last historical point) with 0% error
+                if (hasHistoricalData && historical[brand].length > 0) {
+                    const lastHistoricalQ = historicalQuarters[historicalQuarters.length - 1];
+                    const lastHistoricalValue = historical[brand][historical[brand].length - 1];
+
+                    // Prepend 2024 Q2 connection point
+                    baselineX = [lastHistoricalQ, ...quarters];
+                    baselineY = [lastHistoricalValue, ...baseline[brand]];
+                }
+
+                // Calculate margin of error bounds (starts from 0% at 2024 Q2)
+                const baselineLower = baselineY.map((val, idx) => {
+                    const margin = marginOfError[baselineX[idx]] || 0;
+                    return val * (1 - margin);
+                });
+                const baselineUpper = baselineY.map((val, idx) => {
+                    const margin = marginOfError[baselineX[idx]] || 0;
+                    return val * (1 + margin);
+                });
+
+                // Add lower bound (invisible line)
+                traces.push({
+                    x: baselineX,
+                    y: baselineLower,
+                    mode: 'lines',
+                    name: `${brand} - Baseline Lower`,
+                    line: { width: 0 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add upper bound with fill to create shaded region
+                traces.push({
+                    x: baselineX,
+                    y: baselineUpper,
+                    mode: 'lines',
+                    name: `${brand} - Baseline Upper`,
+                    line: { width: 0 },
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(230, 159, 0, 0.2)',  // Amber with transparency
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add main baseline line on top
+                traces.push({
+                    x: baselineX,
+                    y: baselineY,
+                    mode: 'lines+markers',
+                    name: `${brand} - Baseline Forecast`,
+                    line: { width: 2, color: '#E69F00' },  // Amber
+                    marker: { size: 6, color: '#E69F00', symbol: 'circle' },
+                    connectgaps: true
+                });
+                console.log(`${brand} Baseline:`, baseline[brand]);
+            } else {
+                console.warn(`${brand} baseline data is missing or invalid`);
+            }
+
+            // Simulated forecast (post-intervention) - TEAL-GREEN solid line with margin of error
+            if (simulated[brand] && Array.isArray(simulated[brand])) {
+                let simulatedX = quarters;
+                let simulatedY = simulated[brand];
+
+                // Connect from 2024 Q2 (last historical point) with 0% error
+                if (hasHistoricalData && historical[brand].length > 0) {
+                    const lastHistoricalQ = historicalQuarters[historicalQuarters.length - 1];
+                    const lastHistoricalValue = historical[brand][historical[brand].length - 1];
+
+                    // Prepend 2024 Q2 connection point
+                    simulatedX = [lastHistoricalQ, ...quarters];
+                    simulatedY = [lastHistoricalValue, ...simulated[brand]];
+                }
+
+                // Calculate margin of error bounds (starts from 0% at 2024 Q2)
+                const simulatedLower = simulatedY.map((val, idx) => {
+                    const margin = marginOfError[simulatedX[idx]] || 0;
+                    return val * (1 - margin);
+                });
+                const simulatedUpper = simulatedY.map((val, idx) => {
+                    const margin = marginOfError[simulatedX[idx]] || 0;
+                    return val * (1 + margin);
+                });
+
+                // Add lower bound (invisible line)
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedLower,
+                    mode: 'lines',
+                    name: `${brand} - Simulated Lower`,
+                    line: { width: 0 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add upper bound with fill to create shaded region
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedUpper,
+                    mode: 'lines',
+                    name: `${brand} - Simulated Upper`,
+                    line: { width: 0 },
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(0, 158, 115, 0.2)',  // Teal-Green with transparency
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+
+                // Add main simulated line on top
+                traces.push({
+                    x: simulatedX,
+                    y: simulatedY,
+                    mode: 'lines+markers',
+                    name: `${brand} - Simulated`,
+                    line: { width: 2, color: '#009E73' },  // Teal-Green
+                    marker: { size: 6, color: '#009E73', symbol: 'circle' },
+                    connectgaps: true
+                });
+                console.log(`${brand} Simulated:`, simulated[brand]);
+            } else {
+                console.warn(`${brand} simulated data is missing or invalid`);
+            }
+        });
+
+        if (traces.length === 0) {
+            console.error('No traces to plot');
+            document.getElementById('chartContainer').innerHTML = '<div class="alert alert-warning">No data available to display chart</div>';
+            return;
+        }
+
+        // Check if we have historical data
+        const hasHistoricalData = historicalQuarters && historicalQuarters.length > 0;
+
+        const layout = {
+            // Title configuration for the chart
+            // Displays "Brand Power: Historical & Forecast" in 18px Arial font
+            xaxis: {
+                title: 'Quarter',
+                type: 'category',
+                categoryorder: 'array',
+                categoryarray: hasHistoricalData ? [...historicalQuarters, ...quarters] : quarters,
+                showgrid: true,
+                gridcolor: '#E0E0E0',  // Light gray gridlines
+                gridwidth: 1
+            },
+            yaxis: {
+                title: 'Power',
+                showgrid: true,
+                gridcolor: '#E0E0E0',  // Light gray gridlines
+                gridwidth: 1
+            },
+            height: 600,
+            plot_bgcolor: 'white',  // White background
+            paper_bgcolor: 'white',  // White background
+            hovermode: 'x unified',
+            showlegend: true,
+            legend: {
+                x: 1.05,
+                y: 1,
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                bordercolor: '#E0E0E0',
+                borderwidth: 1
+            },
+            dragmode: 'zoom',  // Enable zoom mode
+            margin: {
+                l: 80,
+                r: 150,
+                t: 80,
+                b: 80
+            }
+        };
+
+        // Configure chart to be responsive and allow zoom/pan
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToAdd: ['pan2d', 'select2d', 'lasso2d'],
+            modeBarButtonsToRemove: [],
+            displaylogo: false,
+            toImageButtonOptions: {
+                format: 'png',
+                filename: 'brand_power_forecast',
+                height: 800,
+                width: 1200,
+                scale: 1
+            }
+        };
+
+        // Add intervention line at 2024 Q2 - BURNT ORANGE dashed line
+        if (hasHistoricalData) {
+            layout.shapes = [
+                {
+                    type: 'line',
+                    x0: '2024 Q2',
+                    x1: '2024 Q2',
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    xref: 'x',
+                    line: {
+                        color: '#D55E00',  // Burnt Orange
+                        width: 2,
+                        dash: 'dash'  // Dashed line
+                    }
+                }
+            ];
+            layout.annotations = [
+                {
+                    x: '2024 Q2',
+                    y: 1.05,
+                    yref: 'paper',
+                    xref: 'x',
+                    text: 'Intervention',
+                    showarrow: false,
+                    font: {
+                        color: '#D55E00',  // Burnt Orange
+                        size: 14,
+                        family: 'Arial, sans-serif',
+                        weight: 'bold'
+                    },
+                    xanchor: 'center',
+                    yanchor: 'bottom'
+                }
+            ];
+        }
+
+        console.log('Plotting with', traces.length, 'traces');
+        Plotly.newPlot('chartContainer', traces, layout, config);
     }
 
     function saveExperiment() {
@@ -683,7 +1301,7 @@
                 option.addEventListener('click', () => {
                     setTimeout(() => {
                         if (baselineData && simulatedData) {
-                            createChart(baselineData, simulatedData, ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']);
+                            createChart(baselineData, simulatedData, currentQuarters || ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'], historicalData || {}, historicalQuarters || []);
                         }
                     }, 50);
                 });
@@ -795,8 +1413,8 @@
             const filterType = container.getAttribute('data-filter');
             multiSelects[filterType] = new MultiSelect(container);
 
-            // Add listener to re-render table when filters change (for brand, year, month)
-            if (filterType === 'brand' || filterType === 'year' || filterType === 'month') {
+            // Add listener to re-render table when filters change - ADD 'week'
+            if (filterType === 'brand' || filterType === 'year' || filterType === 'month' || filterType === 'week') {
                 container.querySelectorAll('.multi-select-option').forEach(option => {
                     option.addEventListener('click', () => {
                         setTimeout(() => {
@@ -806,6 +1424,16 @@
                 });
             }
         });
+
+        renderEditableTable();
+        
+        // Initialize originalTableRows for changes tracking
+        if (!originalTableRows && tableRows.length > 0) {
+            originalTableRows = JSON.parse(JSON.stringify(tableRows));
+            console.log('Initialized originalTableRows with', tableRows.length, 'rows');
+        }
+        
+        updateSidebarScenarios();
     });
 
     function exportAll() {
@@ -940,9 +1568,5 @@
         window.location.reload();
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        renderEditableTable();
-        updateSidebarScenarios();
-    });
 </script>
 {% endblock %}

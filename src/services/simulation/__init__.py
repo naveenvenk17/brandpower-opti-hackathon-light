@@ -1,6 +1,7 @@
 """
-Simulation module - Brand power simulation with marketing changes
+Simulation Service - Placeholder for backward compatibility
 """
-from .simulation_service import SimulationService
+# Simulation service has been moved to forecast service
+# This file remains for backward compatibility
 
-__all__ = ['SimulationService']
+__all__ = []

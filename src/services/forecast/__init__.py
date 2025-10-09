@@ -1,7 +1,10 @@
 """
-Forecast module - Brand power forecasting services
+Forecast Service - AutoGluon-based forecasting
 """
-from .forecast_service import ForecastSimulateService
+from src.services.forecast.forecast_service import AutoGluonForecastService, get_forecast_service
 
-__all__ = ['ForecastSimulateService']
-
+# Re-export for convenience
+__all__ = [
+    "AutoGluonForecastService",
+    "get_forecast_service",
+]
