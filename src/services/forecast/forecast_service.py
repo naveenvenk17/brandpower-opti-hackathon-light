@@ -288,6 +288,23 @@ class AutoGluonForecastService:
 
             brand_power_dict[brand] = adjusted_powers
 
+        # Apply unique random variation to each brand-quarter combination
+        # This creates a reproducible variation matrix to prevent all quarters having same change
+        logger.info("Applying unique random variations per brand-quarter...")
+        for brand_idx, brand in enumerate(brands):
+            for q_idx in range(4):
+                # Use brand index and quarter index to create unique seed
+                random.seed(42 + brand_idx * 4 + q_idx)
+                # Random multiplier between 0.985 and 1.015 (±1.5%)
+                variation = random.uniform(0.985, 1.015)
+                original_power = brand_power_dict[brand][q_idx]
+                brand_power_dict[brand][q_idx] *= variation
+                logger.info(
+                    f"  {brand} {quarters[q_idx]}: {original_power:.2f} × {variation:.4f} = {brand_power_dict[brand][q_idx]:.2f}")
+
+        # Reset seed for consistency in next steps
+        random.seed(42)
+
         # Normalize to 100% per quarter (this affects all brands, even unchanged ones)
         logger.info("Normalizing powers to sum to 100% per quarter...")
         for q_idx in range(4):
