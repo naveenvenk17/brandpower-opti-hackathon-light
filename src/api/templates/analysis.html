@@ -317,8 +317,8 @@
                                     {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
                                     'Oct', 'Nov', 'Dec'] %}
                                     {% for month in months %}
-                                    <div class="multi-select-option"
-                                        data-value="{{ month }}" data-filter-type="month" role="option">
+                                    <div class="multi-select-option" data-value="{{ month }}" data-filter-type="month"
+                                        role="option">
                                         <div class="multi-select-checkbox"></div>
                                         <span>{{ month }} - {{ month_names[month - 1] if month >= 1 and month <= 12
                                                 else 'Month ' ~ month }}</span>
@@ -498,8 +498,7 @@
 </style>
 
 <!-- Server-provided data for JS -->
-<div id="server-data" 
-    data-brands='{{ brands | tojson | safe if brands is defined else "[]" }}'
+<div id="server-data" data-brands='{{ brands | tojson | safe if brands is defined else "[]" }}'
     data-years='{{ years | tojson | safe if years is defined else "[]" }}'
     data-months='{{ months | tojson | safe if months is defined else "[]" }}'
     data-weeks='{{ weeks | tojson | safe if weeks is defined else "[]" }}'
@@ -621,6 +620,14 @@
 
         html += '</tbody></table>';
         container.innerHTML = html;
+
+        // Force table headers to be bright white - override any other styles
+        setTimeout(() => {
+            container.querySelectorAll('th').forEach(th => {
+                th.style.setProperty('color', '#ffffff', 'important');
+                th.style.setProperty('font-weight', '600', 'important');
+            });
+        }, 0);
 
         container.querySelectorAll('input[data-row]')?.forEach(input => {
             input.addEventListener('change', (e) => {
@@ -814,6 +821,137 @@
         }
     }
 
+    function calculateBrandChanges() {
+        // Calculate the highest % change per brand across all columns
+        if (!originalTableRows || !tableRows) {
+            return {};
+        }
+
+        const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
+
+        // Build per-brand sums
+        const originalByBrand = {};
+        const currentByBrand = {};
+
+        originalTableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!originalByBrand[brand]) originalByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                originalByBrand[brand][col] = (originalByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        tableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!currentByBrand[brand]) currentByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                currentByBrand[brand][col] = (currentByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        // Find highest % change per brand
+        const brandChangesDict = {};
+        const brands = Array.from(new Set([...Object.keys(originalByBrand), ...Object.keys(currentByBrand)]));
+
+        brands.forEach(brand => {
+            let maxChange = 0;
+
+            featureColumns.forEach(col => {
+                const orig = (originalByBrand[brand] && originalByBrand[brand][col]) || 0;
+                const curr = (currentByBrand[brand] && currentByBrand[brand][col]) || 0;
+                const delta = curr - orig;
+
+                if (Math.abs(delta) > 0.01 && orig !== 0) {
+                    const pctChange = (delta / orig) * 100;  // Keep sign (positive/negative)
+
+                    // Track the change with largest absolute value
+                    if (Math.abs(pctChange) > Math.abs(maxChange)) {
+                        maxChange = pctChange;
+                    }
+                }
+            });
+
+            // Store the highest change (with sign) for this brand
+            brandChangesDict[brand] = parseFloat(maxChange.toFixed(2));
+        });
+
+        return brandChangesDict;
+    }
+
+    function calculateChangeType() {
+        // Use the same delta calculation logic as updateChangesSummary()
+        if (!originalTableRows || !tableRows) {
+            return 'minimal';  // No data to compare
+        }
+
+        const brandCol = tableColumns.find(c => c.toLowerCase() === 'brand') || 'brand';
+
+        // Build per-brand sums
+        const originalByBrand = {};
+        const currentByBrand = {};
+
+        originalTableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!originalByBrand[brand]) originalByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                originalByBrand[brand][col] = (originalByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        tableRows.forEach(row => {
+            const brand = String(row[brandCol] || 'Unknown').trim();
+            if (!currentByBrand[brand]) currentByBrand[brand] = {};
+            featureColumns.forEach(col => {
+                const val = parseFloat(row[col]) || 0;
+                currentByBrand[brand][col] = (currentByBrand[brand][col] || 0) + val;
+            });
+        });
+
+        // Check if ANY brand-feature combination has ≥2% change
+        const brands = Array.from(new Set([...Object.keys(originalByBrand), ...Object.keys(currentByBrand)]));
+        let hasSignificantChange = false;
+        let changeDetails = [];
+
+        brands.forEach(brand => {
+            featureColumns.forEach(col => {
+                const orig = (originalByBrand[brand] && originalByBrand[brand][col]) || 0;
+                const curr = (currentByBrand[brand] && currentByBrand[brand][col]) || 0;
+                const delta = curr - orig;
+
+                if (Math.abs(delta) > 0.01) {
+                    if (orig !== 0) {
+                        const pctChange = Math.abs((delta / orig) * 100);
+
+                        // Store change details for logging
+                        if (pctChange >= 2.0) {
+                            changeDetails.push({
+                                brand: brand,
+                                column: col,
+                                pctChange: pctChange.toFixed(1)
+                            });
+                            hasSignificantChange = true;
+                        }
+                    }
+                }
+            });
+        });
+
+        // Return 'actual' if ANY brand-column has ≥2% change
+        if (hasSignificantChange) {
+            console.log('ACTUAL changes detected (≥2% change found):');
+            changeDetails.forEach(change => {
+                console.log(`  ${change.brand} - ${change.column}: ${change.pctChange}% change`);
+            });
+            return 'actual';
+        } else {
+            console.log('MINIMAL changes detected (all changes <2%)');
+            return 'minimal';
+        }
+    }
+
     function calculatePower() {
         const resultsSection = document.getElementById('resultsSection');
         resultsSection.style.display = 'none';
@@ -829,6 +967,12 @@
         const selYears = multiSelects['year'] ? multiSelects['year'].getSelectedValues().map(v => parseInt(v)) : [];
         const selMonths = multiSelects['month'] ? multiSelects['month'].getSelectedValues().map(v => parseInt(v)) : [];
 
+        // Calculate change type flag and brand changes dictionary
+        const changeType = calculateChangeType();
+        const brandChanges = calculateBrandChanges();
+        console.log('Change Type Flag:', changeType);
+        console.log('Brand Changes Dictionary:', brandChanges);
+
         fetch('/calculate', {
             method: 'POST',
             headers: {
@@ -838,7 +982,9 @@
                 changes: currentChanges,
                 filters: { brands: selBrands, years: selYears, months: selMonths },
                 edited_rows: tableRows,
-                columns: tableColumns
+                columns: tableColumns,
+                change_type: changeType,  // Add change type flag
+                brand_changes: brandChanges  // Add brand changes dictionary
             })
         })
             .then(response => response.json())
@@ -918,6 +1064,14 @@
 
         tableHTML += '</tbody></table></div>';
         document.getElementById('resultsTable').innerHTML = tableHTML;
+
+        // Force quarterly forecast table headers to be bright white
+        setTimeout(() => {
+            document.getElementById('resultsTable').querySelectorAll('th').forEach(th => {
+                th.style.setProperty('color', '#ffffff', 'important');
+                th.style.setProperty('font-weight', '600', 'important');
+            });
+        }, 0);
 
         populateBrandFilter(Object.keys(baseline));
         // Pass historical data and quarters to chart
@@ -1426,13 +1580,13 @@
         });
 
         renderEditableTable();
-        
+
         // Initialize originalTableRows for changes tracking
         if (!originalTableRows && tableRows.length > 0) {
             originalTableRows = JSON.parse(JSON.stringify(tableRows));
             console.log('Initialized originalTableRows with', tableRows.length, 'rows');
         }
-        
+
         updateSidebarScenarios();
     });
 

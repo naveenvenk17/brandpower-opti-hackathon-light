@@ -436,10 +436,21 @@ body {
 
 .table th {
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-    color: var(--white);
+    color: #ffffff !important;
     padding: var(--spacing-md);
     text-align: left;
-    font-weight: 600;
+    font-weight: 600 !important;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Additional specificity for table headers */
+.table thead th,
+.table-container .table th,
+table th {
+    color: #ffffff !important;
+    font-weight: 600 !important;
 }
 
 .table td {
@@ -878,13 +889,6 @@ body {
     margin-bottom: 0;
 }
 
-.table th {
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: #6b7280;
-}
 
 .table tbody tr:hover {
     background-color: #f9fafb;
@@ -900,7 +904,7 @@ body {
 .col {
     flex: 1;
     min-width: 0;
-} 
+}
 
 /* Chat Backdrop - Dims background when chat is open */
 .chat-backdrop {
@@ -953,9 +957,11 @@ body {
 
 .chat-widget {
     position: fixed;
-    bottom: calc(var(--spacing-md) + 56px + var(--spacing-sm)); /* Icon height + margin */
+    bottom: calc(var(--spacing-md) + 56px + var(--spacing-sm));
+    /* Icon height + margin */
     right: var(--spacing-md);
-    width: 456px; /* Increased by 20% from 380px */
+    width: 456px;
+    /* Increased by 20% from 380px */
     max-width: 90%;
     background-color: var(--white);
     border-radius: var(--border-radius-lg);
@@ -999,7 +1005,8 @@ body {
 
 .chat-body {
     padding: var(--spacing-md);
-    height: 420px; /* Increased by ~30% from 320px for better readability */
+    height: 420px;
+    /* Increased by ~30% from 320px for better readability */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -1090,8 +1097,13 @@ body {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Compact message styling */
