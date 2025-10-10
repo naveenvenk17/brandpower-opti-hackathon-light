@@ -8,6 +8,7 @@ ENV/
 .claude/
 docs/
 old_scripts/
+models/
 
 # Python cache files
 __pycache__/

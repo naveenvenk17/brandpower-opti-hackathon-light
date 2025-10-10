@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container fade-in">
     <div class="hero">
-        <h1 class="hero-title">Optimizer</h1>
+        <h1 class="hero-title">Mega Brand Power Optimization</h1>
         <p class="hero-subtitle">Optimize media spend allocation to maximize brand power</p>
     </div>
 
@@ -30,12 +30,15 @@
             <div class="row" style="display:flex; gap:1rem; align-items: flex-end; flex-wrap:wrap;">
                 <div class="form-group" style="min-width:220px;">
                     <label class="form-label">Total Budget ($)</label>
-                    <input type="number" id="budgetAmount" class="form-control" placeholder="Enter total budget" value="1000000000">
+                    <input type="number" id="budgetAmount" class="form-control" placeholder="Enter total budget"
+                        value="1000000000">
                 </div>
                 <div style="flex:1 1 auto; text-align:right;">
                     <button id="optimizeBtn" class="btn btn-primary" onclick="runOptimization()">
-                        <svg width="16" height="16" fill="currentColor" style="margin-right: 0.5rem; vertical-align: middle;">
-                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z"/>
+                        <svg width="16" height="16" fill="currentColor"
+                            style="margin-right: 0.5rem; vertical-align: middle;">
+                            <path
+                                d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z" />
                         </svg>
                         Optimize Marketing Spend
                     </button>
@@ -43,7 +46,8 @@
             </div>
 
             <!-- Filter Controls -->
-            <div id="filtersRow" class="row" style="display:none; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+            <div id="filtersRow" class="row"
+                style="display:none; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
                 <div class="form-group" style="min-width:200px;">
                     <label class="form-label">Filter by Brand</label>
                     <select id="filterBrand" class="form-control">
@@ -61,7 +65,8 @@
                     </select>
                 </div>
                 <div style="flex:1 1 auto; text-align:right;">
-                    <button id="resetFiltersBtn" class="btn btn-secondary btn-slim" onclick="resetFilters()">Reset Filters</button>
+                    <button id="resetFiltersBtn" class="btn btn-secondary btn-slim" onclick="resetFilters()">Reset
+                        Filters</button>
                 </div>
             </div>
 
@@ -85,10 +90,14 @@
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                 <span id="resultsTitle">Optimization Results</span>
                 <div>
-                    <button class="btn btn-secondary btn-slim" onclick="downloadOptimizedCSV()" style="margin-right: 0.5rem;">
-                        <svg width="14" height="14" fill="currentColor" style="margin-right: 0.25rem; vertical-align: middle;">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <button class="btn btn-secondary btn-slim" onclick="downloadOptimizedCSV()"
+                        style="margin-right: 0.5rem;">
+                        <svg width="14" height="14" fill="currentColor"
+                            style="margin-right: 0.25rem; vertical-align: middle;">
+                            <path
+                                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                            <path
+                                d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
                         </svg>
                         Download CSV
                     </button>
@@ -129,7 +138,7 @@
     let allResultsData = [];
 
     // Check for uploaded data on page load
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         checkUploadedData();
     });
 
@@ -193,7 +202,7 @@
         console.log('Sending POST request to', endpoint);
         const startTime = Date.now();
 
-        const requestBody = { 
+        const requestBody = {
             total_budget: parseFloat(budgetRaw),
             brands: ['AGUILA', 'FAMILIA POKER', 'FAMILIA CORONA', 'FAMILIA CLUB COLOMBIA'],
             quarters: ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'],
@@ -315,16 +324,16 @@
 
     function displayBrandPowerResults(data, budgetRaw) {
         console.log('Displaying Brand Power Optimizer results:', data);
-        
+
         const resultsSection = document.getElementById('resultsSection');
         const resultsTable = document.getElementById('resultsTable');
         const summaryCards = document.getElementById('summaryCards');
         const chartCard = document.getElementById('chartCard');
-        
+
         // Check if fallback was used
         const usedFallback = data.fallback_used || data.optimizer_used === 'ga_fallback';
         const optimizerName = usedFallback ? 'GA Optimizer (Fallback)' : 'Brand Power Optimizer';
-        
+
         // Show warning if fallback was used
         if (usedFallback) {
             const warningHtml = `
@@ -335,14 +344,14 @@
             `;
             summaryCards.insertAdjacentHTML('beforebegin', warningHtml);
         }
-        
+
         // Build summary cards
         const cardsHtml = `
             <div class="col" style="flex: 1; min-width: 200px;">
                 <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                     <div class="card-body" style="padding: 1.5rem;">
                         <h6 style="opacity: 0.9; margin-bottom: 0.5rem; font-size: 0.875rem;">Total Budget</h6>
-                        <h3 style="margin: 0; font-weight: 700;">$${parseFloat(budgetRaw).toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
+                        <h3 style="margin: 0; font-weight: 700;">$${parseFloat(budgetRaw).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                     </div>
                 </div>
             </div>
@@ -400,9 +409,9 @@
             quarters.forEach((quarter, qIdx) => {
                 const brandBudget = data.budget_allocation?.[brand] || 0;
                 const quarterBudget = brandBudget / quarters.length;
-                
+
                 let paytvBudget = 0, wholesalersBudget = 0, paytvPct = 0, wholesalersPct = 0;
-                
+
                 if (!usedFallback && data.optimal_allocation?.[brand]) {
                     const allocation = data.optimal_allocation[brand];
                     paytvBudget = (allocation.paytv || 0) / quarters.length;
@@ -443,11 +452,11 @@
                     <tr>
                         <td style="padding: 0.75rem;"><strong>${brand}</strong></td>
                         <td style="padding: 0.75rem; text-align: right;">${quarter}</td>
-                        <td style="padding: 0.75rem; text-align: right;">$${quarterBudget.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                        <td style="padding: 0.75rem; text-align: right;">$${quarterBudget.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                         ${!usedFallback ? `
-                            <td style="padding: 0.75rem; text-align: right;">$${paytvBudget.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                            <td style="padding: 0.75rem; text-align: right;">$${paytvBudget.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                             <td style="padding: 0.75rem; text-align: right;"><span class="badge ${paytvBadgeClass}">${paytvPct.toFixed(1)}%</span></td>
-                            <td style="padding: 0.75rem; text-align: right;">$${wholesalersBudget.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                            <td style="padding: 0.75rem; text-align: right;">$${wholesalersBudget.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                             <td style="padding: 0.75rem; text-align: right;">${wholesalersPct.toFixed(1)}%</td>
                         ` : ''}
                         <td style="padding: 0.75rem; text-align: right;">${baselinePower.toFixed(2)}</td>
@@ -485,7 +494,7 @@
         }
 
         resultsTable.innerHTML = tableHtml;
-        
+
         // Initialize filters
         if (brands.length > 0) {
             const brandSelect = document.getElementById('filterBrand');
@@ -499,43 +508,96 @@
 
         // Display power comparison chart
         if (data.baseline_power && data.optimized_power) {
-            displayBrandPowerComparison(data.baseline_power, data.optimized_power, data.power_uplift);
+            displayBrandPowerComparison(
+                data.baseline_power,
+                data.optimized_power,
+                data.power_uplift,
+                data.historical_power || {},
+                data.historical_quarters || []
+            );
             chartCard.style.display = 'block';
         }
     }
 
-    function displayBrandPowerComparison(baseline, optimized, uplift) {
+    function displayBrandPowerComparison(baseline, optimized, uplift, historical, historicalQuarters) {
         const brands = Object.keys(baseline);
         const quarters = ['Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025'];
+
+        // Calculate sum of all mega brand powers for baseline and optimized
+        const baselineSum = quarters.map((q, idx) =>
+            brands.reduce((sum, brand) => sum + (baseline[brand][idx] || 0), 0)
+        );
+
+        const optimizedSum = quarters.map((q, idx) =>
+            brands.reduce((sum, brand) => sum + (optimized[brand][idx] || 0), 0)
+        );
+
+        // Calculate historical sum if available
         const traces = [];
 
-        brands.forEach((brand) => {
-            traces.push({
-                x: quarters,
-                y: baseline[brand],
-                mode: 'lines+markers',
-                name: `${brand} - Baseline`,
-                line: { width: 3 },
-                marker: { size: 8 }
-            });
+        if (historical && historicalQuarters && historicalQuarters.length > 0) {
+            const historicalSum = historicalQuarters.map((q, idx) =>
+                brands.reduce((sum, brand) => {
+                    const brandHist = historical[brand] || [];
+                    return sum + (brandHist[idx] || 0);
+                }, 0)
+            );
 
             traces.push({
-                x: quarters,
-                y: optimized[brand],
+                x: historicalQuarters,
+                y: historicalSum,
                 mode: 'lines+markers',
-                name: `${brand} - Optimized`,
-                line: { width: 3, dash: 'dash' },
-                marker: { size: 8, symbol: 'diamond' }
+                name: 'Historical Total Power',
+                line: { width: 3, color: '#9ca3af' },
+                marker: { size: 8 },
+                type: 'scatter'
             });
+        }
+
+        // Add baseline and optimized traces
+        traces.push({
+            x: quarters,
+            y: baselineSum,
+            mode: 'lines+markers',
+            name: 'Baseline Total Power',
+            line: { width: 4, color: '#667eea' },
+            marker: { size: 10 },
+            type: 'scatter'
+        });
+
+        traces.push({
+            x: quarters,
+            y: optimizedSum,
+            mode: 'lines+markers',
+            name: 'Optimized Total Power',
+            line: { width: 4, color: '#43e97b', dash: 'dash' },
+            marker: { size: 10, symbol: 'diamond' },
+            type: 'scatter'
         });
 
         const layout = {
-            title: 'Baseline vs Optimized Power by Quarter',
-            xaxis: { title: 'Quarter' },
-            yaxis: { title: 'Brand Power' },
+            title: {
+                text: 'Sum of Mega Brand Powers: Historical, Baseline & Optimized',
+                font: { size: 18, weight: 'bold' }
+            },
+            xaxis: {
+                title: 'Quarter',
+                titlefont: { size: 14 }
+            },
+            yaxis: {
+                title: 'Total Brand Power (Sum of All Brands)',
+                titlefont: { size: 14 }
+            },
             height: 500,
             hovermode: 'x unified',
-            showlegend: true
+            showlegend: true,
+            legend: {
+                x: 0.02,
+                y: 0.98,
+                bgcolor: 'rgba(255,255,255,0.8)',
+                bordercolor: '#e5e7eb',
+                borderwidth: 1
+            }
         };
 
         // Create chart container if it doesn't exist
@@ -548,51 +610,82 @@
         }
 
         Plotly.newPlot('powerChart', traces, layout);
+
+        // Add individual brand breakdown chart
+        displayIndividualBrandComparison(baseline, optimized, quarters, historical, historicalQuarters);
     }
 
-    function displayPowerComparison(baseline, simulated, quarters) {
+    function displayIndividualBrandComparison(baseline, optimized, quarters, historical, historicalQuarters) {
         const brands = Object.keys(baseline);
         const traces = [];
 
-        brands.forEach((brand, i) => {
+        brands.forEach((brand) => {
+            // Add historical data if available
+            if (historical && historical[brand] && historicalQuarters && historicalQuarters.length > 0) {
+                traces.push({
+                    x: historicalQuarters,
+                    y: historical[brand],
+                    mode: 'lines+markers',
+                    name: `${brand} - Historical`,
+                    line: { width: 2, color: '#9ca3af' },
+                    marker: { size: 5 }
+                });
+            }
+
             traces.push({
                 x: quarters,
                 y: baseline[brand],
                 mode: 'lines+markers',
                 name: `${brand} - Baseline`,
-                line: { width: 3 },
-                marker: { size: 8 }
+                line: { width: 2 },
+                marker: { size: 6 }
             });
 
             traces.push({
                 x: quarters,
-                y: simulated[brand],
+                y: optimized[brand],
                 mode: 'lines+markers',
                 name: `${brand} - Optimized`,
-                line: { width: 3, dash: 'dash' },
-                marker: { size: 8, symbol: 'diamond' }
+                line: { width: 2, dash: 'dash' },
+                marker: { size: 6, symbol: 'diamond' }
             });
         });
 
         const layout = {
-            title: 'Baseline vs Optimized Power Forecast',
+            title: {
+                text: 'Individual Brand Power: Historical, Baseline & Optimized',
+                font: { size: 16 }
+            },
             xaxis: { title: 'Quarter' },
             yaxis: { title: 'Brand Power' },
-            height: 500,
-            hovermode: 'x unified'
+            height: 450,
+            hovermode: 'x unified',
+            showlegend: true,
+            legend: {
+                orientation: 'v',
+                x: 1.02,
+                y: 1
+            }
         };
 
-        // Create a container for the chart if it doesn't exist
-        let chartContainer = document.getElementById('powerChart');
-        if (!chartContainer) {
-            chartContainer = document.createElement('div');
-            chartContainer.id = 'powerChart';
-            chartContainer.style.marginTop = '2rem';
-            document.querySelector('#resultsSection .card-body').appendChild(chartContainer);
+        // Create new chart container for individual brands
+        let individualChartContainer = document.getElementById('individualPowerChart');
+        if (!individualChartContainer) {
+            individualChartContainer = document.createElement('div');
+            individualChartContainer.id = 'individualPowerChart';
+            individualChartContainer.style.marginTop = '2rem';
+
+            // Insert after the main chart
+            const chartCard = document.getElementById('chartCard');
+            if (chartCard) {
+                const cardBody = chartCard.querySelector('.card-body');
+                cardBody.appendChild(individualChartContainer);
+            }
         }
 
-        Plotly.newPlot('powerChart', traces, layout);
+        Plotly.newPlot('individualPowerChart', traces, layout);
     }
+
 
     function initFilters(rows) {
         const filtersRow = document.getElementById('filtersRow');
@@ -628,7 +721,7 @@
         const quarterSel = document.getElementById('filterQuarter');
         if (brandSel) brandSel.value = 'All';
         if (quarterSel) quarterSel.value = 'All';
-        
+
         // Re-render table without filters
         if (optimizationResult) {
             displayBrandPowerResults(optimizationResult, document.getElementById('budgetAmount')?.value || '');
@@ -667,7 +760,7 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const timestamp = new Date().toISOString().slice(0,10);
+        const timestamp = new Date().toISOString().slice(0, 10);
         a.download = `optimized_allocation_${timestamp}.csv`;
         document.body.appendChild(a);
         a.click();

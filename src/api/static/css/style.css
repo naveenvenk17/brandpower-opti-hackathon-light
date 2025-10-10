@@ -989,6 +989,41 @@ table th {
     font-weight: 600;
 }
 
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.refresh-chat {
+    background: none;
+    border: none;
+    color: var(--white);
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.refresh-chat svg {
+    width: 18px;
+    height: 18px;
+}
+
+.refresh-chat:hover {
+    opacity: 1;
+    transform: rotate(180deg);
+}
+
+.refresh-chat:active {
+    transform: rotate(180deg) scale(0.95);
+}
+
 .close-chat {
     background: none;
     border: none;
@@ -997,6 +1032,8 @@ table th {
     cursor: pointer;
     opacity: 0.8;
     transition: opacity 0.2s ease;
+    padding: 0;
+    line-height: 1;
 }
 
 .close-chat:hover {
@@ -1034,6 +1071,19 @@ table th {
     color: var(--text-dark);
     align-self: flex-start;
     border-bottom-left-radius: var(--border-radius-sm);
+}
+
+.system-message {
+    background-color: #f0f9ff;
+    color: #0369a1;
+    align-self: center;
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid #bae6fd;
+    max-width: 90%;
+    margin: 0.5rem 0;
 }
 
 .chat-footer {

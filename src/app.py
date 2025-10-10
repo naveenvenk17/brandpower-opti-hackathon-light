@@ -1179,300 +1179,209 @@ def api_optimizer_ga(req: GAOptimizerRequest):
 @app.post("/api/v1/optimize/brand-power")
 def api_brand_power_optimizer(req: Dict[str, Any]):
     """
-    Production-grade Brand Power Optimizer with GA Fallback
+    Rule-Based Demo Optimizer for Mega Brand Power
 
-    PRIMARY: Uses Brand Power Optimizer (paytv & wholesalers optimization)
-    FALLBACK: Uses GA Weekly Optimizer if primary fails
-
-    Optimizes paytv & wholesalers allocation across brands and quarters
-    to maximize total brand power while respecting constraints.
-
-    Request body:
-        {
-            "total_budget": 1000000000,
-            "brands": ["AGUILA", "FAMILIA POKER", ...],
-            "quarters": ["2024 Q3", "2024 Q4", "2025 Q1", "2025 Q2"],
-            "mode": "all_brands" or "per_brand",
-            "method": "gradient" or "evolutionary",
-            "constraints": {
-                "paytv_max_pct": 0.5,
-                "wholesalers_min_pct": 0.0,
-                ...
-            }
-        }
-
-    Returns:
-        {
-            "success": true,
-            "optimal_allocation": {...},
-            "baseline_power": {...},
-            "optimized_power": {...},
-            "power_uplift": {...},
-            "total_uplift_pct": 9.5,
-            "budget_allocation": {...},
-            "optimizer_used": "brand_power" or "ga_fallback",
-            ...
-        }
+    Distributes budget randomly across 4 brands with:
+    - Roughly 50-50 split between wholesalers and paytv
+    - Aguila gets ~70% of PayTV budget
+    - If budget < 1.2M, power decreases
     """
+    import random
     try:
         logger.info("="*80)
-        logger.info("=== BRAND POWER OPTIMIZER API (WITH GA FALLBACK) ===")
+        logger.info("=== MEGA BRAND POWER OPTIMIZATION (DEMO) ===")
         logger.info("="*80)
 
         # Extract parameters
         total_budget = float(
             req.get('total_budget', req.get('amount', 1_000_000_000)))
-        brands = req.get('brands', list(colombia_megabrands))
+        brands = req.get(
+            'brands', ['AGUILA', 'FAMILIA POKER', 'FAMILIA CORONA', 'FAMILIA CLUB COLOMBIA'])
         quarters = req.get(
             'quarters', ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2'])
-        mode = req.get('mode', 'all_brands')
-        method = req.get('method', 'gradient')
 
         logger.info(f"Budget: ${total_budget:,.0f}")
         logger.info(f"Brands: {brands}")
         logger.info(f"Quarters: {quarters}")
-        logger.info(f"Mode: {mode}, Method: {method}")
 
-        # ========================================================================
-        # PRIMARY OPTIMIZER: Brand Power Optimizer
-        # ========================================================================
-        try:
-            logger.info("")
-            logger.info(
-                "🎯 ATTEMPTING PRIMARY OPTIMIZER: Brand Power Optimizer")
-            logger.info("-" * 80)
-
-            # Load baseline forecast
-            baseline_forecast_path = os.path.join(
-                DATA_DIR, 'baseline_forecast.csv')
-            if not os.path.exists(baseline_forecast_path):
-                logger.warning(
-                    f"⚠️  Baseline forecast not found at: {baseline_forecast_path}")
-                raise FileNotFoundError("Baseline forecast data not available")
-
-            baseline_df = pd.read_csv(baseline_forecast_path)
-            logger.info(f"✓ Loaded baseline: {len(baseline_df)} records")
-
-            # Create power predictor
-            predictor = PowerPredictor(baseline_data=baseline_df)
-            logger.info(
-                f"✓ Power predictor initialized with {len(predictor._baseline_power_cache)} brands")
-
-            # Parse constraints
-            constraint_dict = req.get('constraints', {})
-            paytv_max_pct = float(constraint_dict.get('paytv_max_pct', 0.5))
-
-            constraints = OptimizationConstraints(
-                total_budget=total_budget,
-                paytv_max_pct=paytv_max_pct,
-                wholesalers_min_pct=float(
-                    constraint_dict.get('wholesalers_min_pct', 0.0)),
-                wholesalers_max_pct=float(
-                    constraint_dict.get('wholesalers_max_pct', 1.0)),
-                per_brand_min_budget=float(
-                    constraint_dict.get('per_brand_min_budget', 0.0)),
-                per_brand_max_budget=float(constraint_dict.get(
-                    'per_brand_max_budget', 0)) or None,
-            )
-            logger.info(
-                f"✓ Constraints configured: PayTV cap = {paytv_max_pct*100}%")
-
-            # Create optimizer
-            optimizer = BrandPowerOptimizer(
-                power_predictor=predictor,
-                constraints=constraints
-            )
-
-            # Create optimization request
-            opt_request = BrandPowerOptRequest(
-                total_budget=total_budget,
-                brands=brands,
-                quarters=quarters,
-                mode=OptimizationMode(mode),
-                method=OptimizationMethod(method),
-                constraints=constraints
-            )
-
-            # Run optimization
-            logger.info(
-                f"▶ Running Brand Power Optimizer ({method} method)...")
-            result = optimizer.optimize(opt_request)
-
-            if result.success:
-                logger.info("")
-                logger.info("✅ PRIMARY OPTIMIZER SUCCEEDED!")
-                logger.info(
-                    f"   Power Uplift: +{result.total_uplift_pct:.2f}%")
-                logger.info(f"   Baseline: {result.total_baseline_power:.2f}")
-                logger.info(
-                    f"   Optimized: {result.total_optimized_power:.2f}")
-                logger.info(
-                    f"   Constraints: {'✓ Satisfied' if result.constraints_satisfied else '✗ Violations'}")
-                logger.info("="*80)
-
-                # Return result as dict with optimizer marker
-                result_dict = result.dict()
-                result_dict['optimizer_used'] = 'brand_power'
-                result_dict['fallback_used'] = False
-                return result_dict
-            else:
-                raise ValueError(
-                    "Brand Power Optimizer did not converge successfully")
-
-        except Exception as primary_error:
-            # ====================================================================
-            # FALLBACK TO GA OPTIMIZER
-            # ====================================================================
-            logger.error("")
-            logger.error("❌ PRIMARY OPTIMIZER FAILED!")
-            logger.error(f"   Error: {str(primary_error)}")
-            logger.error(f"   Type: {type(primary_error).__name__}")
-            logger.error("")
-            logger.warning("⚠️  INITIATING FALLBACK TO GA OPTIMIZER")
-            logger.warning("=" * 80)
-            logger.info("🔄 FALLBACK OPTIMIZER: GA Weekly Optimizer")
-            logger.info("-" * 80)
-
-            # Get uploaded file from UI state for GA optimizer
-            state = _load_ui_state()
-            uploaded_file_path = state.get("last_uploaded_file")
-
-            if not uploaded_file_path or not os.path.exists(uploaded_file_path):
-                logger.error(
-                    "❌ FALLBACK ALSO FAILED: No uploaded data file found")
-                logger.error(
-                    "   Cannot run GA optimizer without historical data")
-                logger.error("="*80)
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Primary optimizer failed ({str(primary_error)}), and fallback requires uploaded data file"
-                )
-
-            logger.info(f"✓ Found uploaded file: {uploaded_file_path}")
-
-            # Load historical data for GA
-            df = pd.read_csv(uploaded_file_path)
-            logger.info(
-                f"✓ Loaded data: {df.shape[0]} rows × {df.shape[1]} columns")
-
-            # Run GA optimization
-            logger.info(f"▶ Running GA Optimizer (fallback)...")
-            plan_df = optimize_weekly_spend(
-                total_spend=total_budget,
-                historical_spend_df=df,
-                megabrands=brands,
-                num_weeks=48,
-            )
-            logger.info(f"✓ GA plan generated: {plan_df.shape[0]} rows")
-
-            # Get baseline forecast (if available)
-            _, baseline_forecast = get_service_and_baseline()
-            quarters_list = ['2024 Q3', '2024 Q4', '2025 Q1', '2025 Q2']
-
-            # Compute baseline power
-            baseline = {}
-            for brand in brands:
-                brand_baseline_df = baseline_forecast[
-                    (baseline_forecast['brand'] == brand.lower())
-                ].sort_values(['year', 'quarter'])
-                if not brand_baseline_df.empty:
-                    baseline[brand] = brand_baseline_df['predicted_power'].head(
-                        4).tolist()
-                else:
-                    baseline[brand] = [0.0, 0.0, 0.0, 0.0]
-
-            # Compute simulated power from plan
-            try:
-                groups = list(get_channel_groups().keys())
-                wide = plan_df.pivot_table(
-                    index=['brand', 'week'],
-                    columns='channel',
-                    values='optimized_spend',
-                    aggfunc='sum',
-                    fill_value=0.0
-                ).reset_index()
-
-                for g in groups:
-                    if g not in wide.columns:
-                        wide[g] = 0.0
-
-                scored = calculate_brand_power(wide)
-
-                def week_to_quarter(w: int) -> str:
-                    if 1 <= w <= 12:
-                        return '2024 Q3'
-                    if 13 <= w <= 24:
-                        return '2024 Q4'
-                    if 25 <= w <= 36:
-                        return '2025 Q1'
-                    return '2025 Q2'
-
-                scored['quarter'] = scored['week'].apply(
-                    lambda x: week_to_quarter(int(x)))
-
-                sim = {}
-                for b in brands:
-                    bdf = scored[scored['brand'] == b]
-                    arr = []
-                    for q in quarters_list:
-                        vals = bdf[bdf['quarter'] == q]['power'] if 'power' in bdf.columns else pd.Series(
-                            dtype=float)
-                        arr.append(float(vals.mean())
-                                   if not vals.empty else 0.0)
-                    sim[b] = arr
-
-                # Apply guardrails to simulated power
-                sim = apply_power_guardrails(baseline, sim, quarters_list)
-            except Exception as e:
-                logger.warning(f"⚠️  Could not calculate simulated power: {e}")
-                sim = {b: [0.0, 0.0, 0.0, 0.0] for b in brands}
-
-            # Calculate uplift
-            total_baseline = sum(sum(baseline[b]) for b in brands)
-            total_optimized = sum(sum(sim[b]) for b in brands)
-            total_uplift_pct = ((total_optimized - total_baseline) /
-                                total_baseline * 100) if total_baseline > 0 else 0.0
-
-            logger.info("")
-            logger.info("✅ FALLBACK OPTIMIZER SUCCEEDED!")
-            logger.info(f"   Power Uplift: +{total_uplift_pct:.2f}%")
-            logger.info(f"   Baseline: {total_baseline:.2f}")
-            logger.info(f"   Optimized: {total_optimized:.2f}")
+        # Load baseline forecast
+        baseline_forecast_path = os.path.join(
+            DATA_DIR, 'baseline_forecast.csv')
+        if not os.path.exists(baseline_forecast_path):
             logger.warning(
-                f"   ⚠️  Used GA fallback due to: {str(primary_error)}")
-            logger.info("="*80)
+                f"Baseline forecast not found at: {baseline_forecast_path}")
+            raise FileNotFoundError("Baseline forecast data not available")
 
-            # Return GA result in Brand Power format
-            return {
-                'success': True,
-                'optimizer_used': 'ga_fallback',
-                'fallback_used': True,
-                'fallback_reason': str(primary_error),
-                'total_uplift_pct': total_uplift_pct,
-                'total_baseline_power': total_baseline,
-                'total_optimized_power': total_optimized,
-                'baseline_power': baseline,
-                'optimized_power': sim,
-                'quarters': quarters_list,
-                'brands': brands,
-                'ga_plan_data': plan_df.to_dict('records'),
-                'ga_plan_columns': ['brand', 'week', 'channel', 'optimized_spend'],
-                'budget': total_budget,
-                'constraints_satisfied': True,  # GA doesn't validate constraints
-                'constraint_violations': [],
-                'message': f'Used GA fallback optimizer. Primary optimizer failed: {str(primary_error)}'
+        baseline_df = pd.read_csv(baseline_forecast_path)
+        logger.info(f"Loaded baseline: {len(baseline_df)} records")
+
+        # Get baseline power for each brand (future quarters)
+        baseline_power = {}
+        for brand in brands:
+            brand_baseline = baseline_df[
+                (baseline_df['brand'] == brand.upper())
+            ].sort_values(['year', 'quarter'])
+            if not brand_baseline.empty:
+                baseline_power[brand] = brand_baseline['predicted_power'].head(
+                    4).tolist()
+            else:
+                baseline_power[brand] = [1.0, 1.0, 1.0, 1.0]
+
+        # Get historical power data (past quarters)
+        historical_power = {}
+        historical_quarters = []
+        for brand in brands:
+            brand_historical = baseline_df[
+                (baseline_df['brand'] == brand.upper())
+            ].sort_values(['year', 'quarter'])
+
+            if not brand_historical.empty:
+                all_quarters = brand_historical.apply(
+                    lambda row: f"{int(row['year'])} Q{int(row['quarter'])}", axis=1
+                ).tolist()
+                all_powers = brand_historical['predicted_power'].tolist()
+
+                if len(all_quarters) > 4:
+                    historical_quarters = all_quarters[:-4]
+                    historical_power[brand] = all_powers[:-4]
+                else:
+                    historical_quarters = []
+                    historical_power[brand] = []
+            else:
+                historical_power[brand] = []
+
+        logger.info(f"Historical quarters: {historical_quarters}")
+
+        # Calculate total baseline
+        total_baseline = sum(sum(baseline_power[b]) for b in brands)
+
+        # RULE-BASED RANDOM ALLOCATION
+        random.seed(42)
+
+        # Step 1: Distribute budget randomly across 4 brands
+        weights = [random.uniform(0.15, 0.35) for _ in brands]
+        total_weight = sum(weights)
+        normalized_weights = [w / total_weight for w in weights]
+
+        brand_budgets = {brand: total_budget * weight for brand,
+                         weight in zip(brands, normalized_weights)}
+
+        logger.info("Brand Budget Distribution:")
+        for brand, budget in brand_budgets.items():
+            logger.info(
+                f"  {brand}: ${budget:,.0f} ({budget/total_budget*100:.1f}%)")
+
+        # Step 2: Split each brand budget between paytv and wholesalers (~50-50)
+        optimal_allocation = {}
+        for brand in brands:
+            brand_budget = brand_budgets[brand]
+
+            if brand == 'AGUILA':
+                paytv_pct = random.uniform(0.48, 0.52)
+                paytv_budget = brand_budget * paytv_pct
+                wholesalers_budget = brand_budget * (1 - paytv_pct)
+            else:
+                paytv_pct = random.uniform(0.45, 0.55)
+                paytv_budget = brand_budget * paytv_pct
+                wholesalers_budget = brand_budget * (1 - paytv_pct)
+
+            optimal_allocation[brand] = {
+                'paytv': paytv_budget,
+                'wholesalers': wholesalers_budget
             }
+
+            logger.info(
+                f"{brand} Channel Split: PayTV={paytv_pct*100:.1f}%, Wholesalers={100-paytv_pct*100:.1f}%")
+
+        # Step 3: Redistribute PayTV to give Aguila ~70%
+        total_paytv = sum(optimal_allocation[b]['paytv'] for b in brands)
+        aguila_paytv_target = total_paytv * 0.70
+        other_paytv_budget = total_paytv - aguila_paytv_target
+
+        optimal_allocation['AGUILA']['paytv'] = aguila_paytv_target
+
+        other_brands = [b for b in brands if b != 'AGUILA']
+        other_weights = [random.uniform(0.25, 0.40) for _ in other_brands]
+        other_total = sum(other_weights)
+
+        for i, brand in enumerate(other_brands):
+            optimal_allocation[brand]['paytv'] = other_paytv_budget * \
+                (other_weights[i] / other_total)
+
+        logger.info("PayTV Distribution after Aguila preference:")
+        for brand in brands:
+            logger.info(
+                f"  {brand} PayTV: ${optimal_allocation[brand]['paytv']:,.0f} ({optimal_allocation[brand]['paytv']/total_paytv*100:.1f}%)")
+
+        # Step 4: Calculate optimized power based on budget
+        BASELINE_BUDGET = 1_200_000
+        budget_ratio = total_budget / BASELINE_BUDGET
+
+        optimized_power = {}
+        for brand in brands:
+            if budget_ratio < 1.0:
+                power_multiplier = 0.85 + (budget_ratio * 0.10)
+            else:
+                power_multiplier = 0.95 + \
+                    min((budget_ratio - 1.0) * 0.15, 0.25)
+
+            brand_variation = random.uniform(0.95, 1.05)
+            final_multiplier = power_multiplier * brand_variation
+
+            optimized_power[brand] = [
+                p * final_multiplier for p in baseline_power[brand]]
+
+        # Calculate totals
+        total_optimized = sum(sum(optimized_power[b]) for b in brands)
+        total_uplift_pct = ((total_optimized - total_baseline) /
+                            total_baseline * 100) if total_baseline > 0 else 0.0
+
+        # Calculate power uplift per brand
+        power_uplift = {}
+        for brand in brands:
+            baseline_sum = sum(baseline_power[brand])
+            optimized_sum = sum(optimized_power[brand])
+            power_uplift[brand] = optimized_sum - baseline_sum
+
+        logger.info("")
+        logger.info("OPTIMIZATION COMPLETE")
+        logger.info(f"  Power Uplift: {total_uplift_pct:+.2f}%")
+        logger.info(f"  Baseline: {total_baseline:.2f}")
+        logger.info(f"  Optimized: {total_optimized:.2f}")
+        logger.info("="*80)
+
+        # Return result
+        return {
+            'success': True,
+            'optimizer_used': 'rule_based_demo',
+            'fallback_used': False,
+            'total_uplift_pct': total_uplift_pct,
+            'total_baseline_power': total_baseline,
+            'total_optimized_power': total_optimized,
+            'baseline_power': baseline_power,
+            'optimized_power': optimized_power,
+            'power_uplift': power_uplift,
+            'quarters': quarters,
+            'brands': brands,
+            'budget_allocation': brand_budgets,
+            'optimal_allocation': optimal_allocation,
+            'constraints_satisfied': True,
+            'constraint_violations': [],
+            'budget': total_budget,
+            'historical_power': historical_power,
+            'historical_quarters': historical_quarters,
+            'message': 'Rule-based demo optimization complete'
+        }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("!"*80)
-        logger.error(f"❌ BOTH OPTIMIZERS FAILED!")
-        logger.error(f"   Final Error: {str(e)}")
+        logger.error(f"OPTIMIZATION FAILED: {str(e)}")
         logger.error("!"*80)
         logger.exception("Full traceback:")
         raise HTTPException(
-            status_code=500, detail=f"All optimizers failed: {str(e)}")
+            status_code=500, detail=f"Optimization failed: {str(e)}")
 
 
 @app.post("/calculate")

@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatBody = document.getElementById('chat-body');
     const chatInput = document.getElementById('chat-input');
     const sendChat = document.getElementById('send-chat');
+    const refreshChat = document.getElementById('refresh-chat');
     const chatBackdrop = document.getElementById('chat-backdrop');
 
     let chatHistory = [];
@@ -112,6 +113,12 @@ document.addEventListener('DOMContentLoaded', function() {
         chatWidget.style.display = 'none';
         chatIcon.style.display = 'flex';
         chatBackdrop.classList.remove('show');
+    });
+
+    refreshChat.addEventListener('click', () => {
+        if (confirm('Clear chat history? This will start a fresh conversation.')) {
+            clearChat();
+        }
     });
 
     // Click on backdrop to close chat
@@ -207,5 +214,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
         chatBody.appendChild(messageElement);
         chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function clearChat() {
+        // Clear the chat history
+        chatHistory = [];
+        
+        // Clear the chat body
+        chatBody.innerHTML = '';
+        
+        // Add a system message
+        const systemMessage = document.createElement('div');
+        systemMessage.classList.add('chat-message', 'system-message');
+        systemMessage.textContent = '🔄 Chat history cleared. Starting fresh conversation!';
+        chatBody.appendChild(systemMessage);
+        
+        // Optional: notify backend to clear server-side memory
+        fetch('/api/v1/chat/clear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        }).catch(error => {
+            console.log('Note: Server-side memory clear not implemented yet');
+        });
     }
 });
